@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Altools — a notch island, launcher and AI toolkit for your Mac menu bar</title>
+  <meta name="description" content="Altools is a free, open-source macOS menu-bar app: a notch island with music, meetings, markets and AI agent alerts, a launcher with clipboard history and AI, actions on selected text, screenshots with OCR, widgets and a menu-bar icon hider.">
+  <meta property="og:title" content="Altools for macOS">
+  <meta property="og:description" content="A notch island, launcher, clipboard, AI and menu-bar tools in one native Mac app. Free and open source.">
+  <meta property="og:image" content="assets/notch-home.png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%2361AFEF'/%3E%3Cg fill='%23fff'%3E%3Ccircle cx='7' cy='7' r='2'/%3E%3Ccircle cx='12' cy='7' r='2'/%3E%3Ccircle cx='17' cy='7' r='2'/%3E%3Ccircle cx='7' cy='12' r='2'/%3E%3Crect x='10' y='10' width='4' height='4' rx='1'/%3E%3Ccircle cx='17' cy='12' r='2'/%3E%3Ccircle cx='7' cy='17' r='2'/%3E%3Ccircle cx='12' cy='17' r='2'/%3E%3Ccircle cx='17' cy='17' r='2'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+  <!-- Read by search engines and screen readers; the desktop below is the visual version. -->
+  <section class="sr-only" id="about">
+    <h1>Altools — a notch island, launcher and AI toolkit for your Mac menu bar</h1>
+    <p>A free, open-source, native macOS app. Everything runs locally; AI goes through the Claude Code or Codex CLI you already use.</p>
+    <h2>Features</h2>
+    <ul>
+      <li>Notch island: now playing, meeting countdowns, volume, charging, camera and microphone use, finished downloads.</li>
+      <li>Notch tabs: Home, Media, To-do (Reminders), Notes, file Shelf, AI usage and Markets.</li>
+      <li>Agent alerts: when a Claude Code agent in tuios needs approval, asks a question, errors or finishes, a card drops from the notch; click to jump to the pane.</li>
+      <li>Markets: crypto, US and Hong Kong stocks, added by name or code.</li>
+      <li>AI usage: Claude Code's 5-hour and weekly plan quotas and tokens used today.</li>
+      <li>Launcher (⌥ Space): apps, commands, maths and clipboard history; Tab asks AI.</li>
+      <li>Actions on selected text: translate, explain, rewrite or a custom prompt, then replace the selection.</li>
+      <li>Capture (⌥⇧A): annotate, copy, save or pin; ⌥⇧O copies the text in an area with on-device OCR.</li>
+      <li>Menu-bar widgets: CPU, battery, calendar, network speed.</li>
+      <li>Hide menu-bar icons on macOS 27: Shown, Hidden or Always hidden, revealed with one click or ⌥B.</li>
+    </ul>
+    <p><a href="https://github.com/matyle/altools/releases/latest">Download Altools</a> · <a href="https://github.com/matyle/altools">Source on GitHub</a></p>
+  </section>
+
+  <div id="desktop" aria-hidden="true">
+    <div id="wallpaper"><div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div><svg class="ridges" viewBox="0 0 1440 900" preserveAspectRatio="none"><path d="M0 640 C 240 560 420 700 720 620 S 1200 520 1440 600 L1440 900 L0 900Z"/><path d="M0 720 C 300 650 520 780 800 700 S 1250 640 1440 690 L1440 900 L0 900Z"/></svg></div>
+
+    <!-- Menu bar -->
+    <header id="menubar">
+      <div class="mb-left">
+        <span class="mb-logo" data-icon="grid"></span>
+        <span class="mb-app">Altools</span>
+        <span class="mb-item" data-i18n="menuFile">File</span>
+        <span class="mb-item" data-i18n="menuEdit">Edit</span>
+        <span class="mb-item" data-i18n="menuView">View</span>
+        <span class="mb-item" data-i18n="menuWindow">Window</span>
+        <span class="mb-item" data-i18n="menuHelp">Help</span>
+      </div>
+      <div class="mb-right">
+        <div id="hidden-icons" class="mb-group">
+          <span class="mb-icon third" data-icon="cloud" title="Cloud sync"></span>
+          <span class="mb-icon third" data-icon="chat" title="Chat"></span>
+          <span class="mb-icon third" data-icon="shield" title="VPN"></span>
+          <span class="mb-icon third" data-icon="key" title="Passwords"></span>
+        </div>
+        <button id="hide-dot" class="mb-icon" title="Show hidden icons (⌥B)"><span class="dot"></span></button>
+        <div id="widgets" class="mb-group">
+          <span class="mb-widget" id="w-cpu"><span data-icon="cpu"></span><b>12%</b></span>
+          <span class="mb-widget" id="w-bat"><span data-icon="battery"></span><b>86%</b></span>
+          <span class="mb-widget mb-net" id="w-net"><i>1.2 KB/s ↑</i><i>48 KB/s ↓</i></span>
+        </div>
+        <span class="mb-icon" data-icon="wifi"></span>
+        <button id="lang-btn" class="mb-item mb-lang">EN</button>
+        <span class="mb-clock" id="clock">Tue 25 9:41</span>
+      </div>
+    </header>
+
+    <!-- Notch island -->
+    <div id="notch" class="collapsed">
+      <div class="ears">
+        <div class="ear left"><div class="art mini"></div></div>
+        <div class="ear right"><div class="bars"><i></i><i></i><i></i><i></i></div></div>
+      </div>
+      <div class="island">
+        <nav class="tabs">
+          <button data-tab="home" class="on"><span data-icon="house"></span><em data-i18n="tabHome">Home</em></button>
+          <button data-tab="media"><span data-icon="music"></span><em data-i18n="tabMedia">Media</em></button>
+          <button data-tab="usage"><span data-icon="gauge"></span><em data-i18n="tabUsage">AI usage</em></button>
+          <button data-tab="markets" id="tab-markets"><span data-icon="chart"></span><em data-i18n="tabMarkets">Markets</em></button>
+        </nav>
+        <section class="pane" data-pane="home">
+          <div class="home-row">
+            <div class="card media-card">
+              <div class="art"></div>
+              <div class="media-meta">
+                <b>Afterglow Drive</b><span>Coastal Static</span>
+                <div class="progress"><i style="width:38%"></i></div>
+                <div class="media-ctl"><span data-icon="back"></span><span data-icon="pause" class="big"></span><span data-icon="fwd"></span></div>
+              </div>
+            </div>
+            <div class="card agenda">
+              <div class="meeting"><i></i><div><b data-i18n="meetingTitle">Design review</b><span id="meeting-left">Starts in 12 min</span></div><button class="join" data-i18n="join">Join</button></div>
+              <hr>
+              <div class="todos"><b><span data-icon="check"></span> <span data-i18n="due">3 due today</span></b><span data-i18n="todo1">· Send the Q3 invoice</span><span data-i18n="todo2">· Reply to Lena's doc</span></div>
+            </div>
+            <div class="card markets-mini" id="markets-mini"></div>
+          </div>
+          <div class="quick" id="quick">
+            <button data-action="capture"><span data-icon="capture" class="t-red"></span><em data-i18n="qCapture">Capture</em></button>
+            <button data-action="color"><span data-icon="drop" class="t-yellow"></span><em data-i18n="qColor">Color</em></button>
+            <button data-action="clips"><span data-icon="clip" class="t-cyan"></span><em data-i18n="qClips">Clips</em></button>
+            <button data-action="translate"><span data-icon="translate" class="t-purple"></span><em data-i18n="qTranslate">Translate</em></button>
+            <button data-action="ai"><span data-icon="spark" class="t-purple"></span><em data-i18n="qAI">Ask AI</em></button>
+          </div>
+          <button class="agent-strip" id="agent-strip" hidden></button>
+        </section>
+        <section class="pane" data-pane="media" hidden>
+          <div class="card media-big"><div class="art big"></div><div><b>Afterglow Drive</b><span>Coastal Static · Neon Pier</span><div class="progress"><i style="width:38%"></i></div><div class="media-ctl"><span data-icon="back"></span><span data-icon="pause" class="big"></span><span data-icon="fwd"></span></div></div></div>
+        </section>
+        <section class="pane" data-pane="usage" hidden>
+          <div class="usage-row">
+            <div class="card usage"><b><i class="dot claude"></i>Claude Code <em class="pill">Max</em></b>
+              <label><span data-i18n="u5h">5 hours</span><small data-i18n="uReset2h">resets in 2 h</small><strong>46%</strong></label><div class="seg" data-v="46"></div>
+              <label><span data-i18n="uWeek">This week</span><small data-i18n="uReset4d">resets in 4 days</small><strong>18%</strong></label><div class="seg" data-v="18"></div>
+              <p><span data-i18n="uTokens">Tokens today</span> <b>12M</b></p></div>
+            <div class="card usage"><b><i class="dot codex"></i>Codex</b>
+              <label><span data-i18n="u5h">5 hours</span><small data-i18n="uReset3h">resets in 3 h</small><strong>21%</strong></label><div class="seg" data-v="21"></div>
+              <label><span data-i18n="uWeek">This week</span><small data-i18n="uReset6d">resets in 6 days</small><strong>9%</strong></label><div class="seg" data-v="9"></div>
+              <p><span data-i18n="uTokens">Tokens today</span> <b>3.4M</b></p></div>
+          </div>
+        </section>
+        <section class="pane" data-pane="markets" hidden>
+          <div class="markets-grid" id="markets-grid"></div>
+        </section>
+      </div>
+      <button class="agent-card" id="agent-card" hidden></button>
+    </div>
+    <div id="notch-hint" class="bubble"><b data-i18n="hintTitle">Try the notch</b><span data-i18n="hintBody">Point at the black island at the top of the screen.</span></div>
+
+    <!-- Welcome notification -->
+    <div id="welcome" class="notice">
+      <span class="app-icon" data-icon="grid"></span>
+      <div><b data-i18n="welcomeTitle">Altools is running</b><span data-i18n="welcomeBody">This page is a live demo. Hover the notch, press ⌥ Space, select text in Notes, or open Settings and switch modules off.</span></div>
+      <button id="welcome-open" data-i18n="openSettings">Open Settings</button>
+    </div>
+
+    <!-- Desktop icons -->
+    <div id="desk-icons">
+      <button class="desk-icon" data-open="settings"><span class="tile t-blue-bg" data-icon="gear"></span><em data-i18n="iconSettings">Altools Settings</em></button>
+      <button class="desk-icon" data-open="notes"><span class="tile t-yellow-bg" data-icon="note"></span><em data-i18n="iconNotes">Notes</em></button>
+      <a class="desk-icon" href="https://github.com/matyle/altools/releases/latest"><span class="tile t-green-bg" data-icon="download"></span><em data-i18n="iconDownload">Download</em></a>
+      <a class="desk-icon" href="https://github.com/matyle/altools"><span class="tile t-dark-bg" data-icon="github"></span><em>GitHub</em></a>
+    </div>
+
+    <!-- Shortcut hints -->
+    <div id="keys" class="panel-glass">
+      <b data-i18n="keysTitle">Try it here</b>
+      <span><kbd>⌥</kbd><kbd>Space</kbd> <em data-i18n="kLauncher">Launcher</em></span>
+      <span><kbd>⌥</kbd><kbd>⇧</kbd><kbd>V</kbd> <em data-i18n="kClips">Clipboard</em></span>
+      <span><kbd>⌥</kbd><kbd>⇧</kbd><kbd>A</kbd> <em data-i18n="kCapture">Capture</em></span>
+      <span><kbd>⌥</kbd><kbd>B</kbd> <em data-i18n="kHide">Hidden icons</em></span>
+      <span><kbd>⌥</kbd><kbd>N</kbd> <em data-i18n="kNotch">Notch</em></span>
+    </div>
+
+    <!-- Windows -->
+    <div class="window" id="win-notes" data-win="notes" hidden style="left:120px;top:150px;width:460px">
+      <div class="titlebar"><div class="lights"><i class="close"></i><i></i><i></i></div><span data-i18n="notesTitle">Notes — select some text</span></div>
+      <div class="notes-body" id="notes-body">
+        <p data-i18n="note1">The quick brown fox jumps over the lazy dog, then naps in the warm afternoon sun.</p>
+        <p data-i18n="note2">Ship small changes often; a release that fixes one thing is easier to trust than one that fixes ten.</p>
+        <p data-i18n="note3">Meeting moved to Thursday at 3pm, room 4B. Bring the Q4 numbers.</p>
+      </div>
+    </div>
+
+    <div class="window" id="win-terminal" data-win="terminal" hidden style="left:300px;top:190px;width:560px">
+      <div class="titlebar"><div class="lights"><i class="close"></i><i></i><i></i></div><span id="term-title">tuios — api-server refactor</span></div>
+      <div class="term" id="term-body"></div>
+    </div>
+
+    <div class="window" id="win-annotate" data-win="annotate" hidden style="left:220px;top:110px;width:720px">
+      <div class="titlebar"><div class="lights"><i class="close"></i><i></i><i></i></div><span data-i18n="annotateTitle">Annotate</span></div>
+      <img src="assets/capture-annotate.png" alt="Annotating a screenshot in Altools" class="shot">
+    </div>
+
+    <div class="window settings" id="win-settings" data-win="settings" hidden style="left:200px;top:70px;width:860px;height:560px">
+      <div class="titlebar"><div class="lights"><i class="close"></i><i></i><i></i></div><span data-i18n="settingsTitle">Altools Settings</span></div>
+      <div class="settings-body">
+        <aside class="st-side" id="st-side"></aside>
+        <main class="st-main" id="st-main"></main>
+      </div>
+    </div>
+
+    <!-- Launcher -->
+    <div id="launcher" hidden>
+      <div class="ln-box">
+        <div class="ln-input"><span data-icon="search"></span><input id="ln-q" autocomplete="off" spellcheck="false"><kbd id="ln-mode"></kbd></div>
+        <div class="ln-list" id="ln-list"></div>
+        <div class="ln-foot"><span><span data-icon="grid"></span> Altools</span><span id="ln-foot-hint"></span></div>
+      </div>
+    </div>
+
+    <!-- Selection bar and result -->
+    <div id="selbar" hidden>
+      <button data-sel="copy"><span data-icon="copy"></span><em data-i18n="selCopy">Copy</em></button>
+      <button data-sel="translate"><span data-icon="translate"></span><em data-i18n="selTranslate">Translate</em></button>
+      <button data-sel="explain"><span data-icon="spark"></span><em data-i18n="selExplain">Explain</em></button>
+      <button data-sel="rewrite"><span data-icon="pen"></span><em data-i18n="selRewrite">Rewrite</em></button>
+    </div>
+    <div id="selresult" hidden><div class="sr-head"><b id="sr-title"></b><button id="sr-close">✕</button></div><p id="sr-src"></p><p id="sr-out"></p><div class="sr-actions"><button id="sr-copy" data-i18n="selCopy">Copy</button><button id="sr-replace" class="primary" data-i18n="selReplace">Replace</button></div></div>
+
+    <!-- Capture overlay -->
+    <div id="capture" hidden><div id="cap-rect"></div><div class="cap-tip" data-i18n="capTip">Drag to capture an area · Esc cancels</div></div>
+
+    <div id="toast" hidden></div>
+
+    <!-- Dock -->
+    <nav id="dock">
+      <button data-open="settings" title="Settings"><span class="tile t-blue-bg" data-icon="gear"></span></button>
+      <button data-open="launcher" title="Launcher (⌥ Space)"><span class="tile t-purple-bg" data-icon="search"></span></button>
+      <button data-open="notes" title="Notes"><span class="tile t-yellow-bg" data-icon="note"></span></button>
+      <i class="sep"></i>
+      <a href="https://github.com/matyle/altools/releases/latest" title="Download"><span class="tile t-green-bg" data-icon="download"></span></a>
+      <a href="https://github.com/matyle/altools" title="GitHub"><span class="tile t-dark-bg" data-icon="github"></span></a>
+    </nav>
+  </div>
+
+  <!-- Narrow screens get a plain page instead of the desktop. -->
+  <main id="mobile">
+    <div class="m-hero">
+      <span class="m-logo" data-icon="grid"></span>
+      <h1>Altools</h1>
+      <p data-i18n="mTagline">A notch island, launcher, clipboard, AI and menu-bar tools in one native Mac app.</p>
+      <a class="m-btn" href="https://github.com/matyle/altools/releases/latest" data-i18n="mDownload">Download for macOS</a>
+      <a class="m-link" href="https://github.com/matyle/altools">GitHub</a>
+      <p class="m-note" data-i18n="mNote">Open this page on a Mac to try the live desktop demo.</p>
+    </div>
+    <img src="assets/notch-home.png" alt="Notch island Home tab">
+    <img src="assets/notch-agent-card.png" alt="Agent alert card">
+    <img src="assets/launcher.png" alt="Launcher">
+    <img src="assets/notch-markets.png" alt="Markets tab">
+    <img src="assets/settings-overview.png" alt="Settings">
+  </main>
+
+  <script src="app.js?v=4"></script>
+</body>
+</html>
