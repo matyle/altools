@@ -66,8 +66,8 @@
 
 ## 安装
 
-1. 从最新的 [Release](../../releases/latest) 下载 `Altools.zip`；每次推送到 `main` 都会自动发布一个。
-2. 解压到 **/Applications** 后打开。安装包没有经过公证，第一次需要右键 app 选择 **打开**。
+1. 从最新的 [Release](../../releases/latest) 下载 `Altools.dmg`；每次推送到 `main` 都会自动发布一个。
+2. 打开后把 **Altools** 拖到 **应用程序（Applications）**，再从应用程序里打开它。安装包没有经过公证：如果 macOS 提示无法验证，打开 **系统设置 › 隐私与安全性**，点 **仍要打开**。
 3. 按需授予权限：**辅助功能**（划词、粘贴回去、快捷键、读取菜单栏图标）、**屏幕录制**（截图）、日历和提醒事项（刘海）、自动化（Music 和 Spotify）。
 
 请从 /Applications 运行：macOS 27 会拒绝从其他位置（比如构建目录）运行的 app 的菜单栏图标。
@@ -79,6 +79,7 @@
 ```sh
 scripts/build-app.sh                  # 生成 build/Altools.app（release）
 scripts/build-app.sh release install  # 同时复制到 /Applications
+scripts/build-app.sh release dmg      # 同时生成 build/Altools.dmg
 swift test                            # 核心逻辑测试
 ```
 
