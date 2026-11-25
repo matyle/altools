@@ -66,7 +66,7 @@
 
 ## 安装
 
-1. 从 [Releases](../../releases) 或 [Actions](../../actions) 最新一次运行里下载 `Altools.zip`。
+1. 从最新的 [Release](../../releases/latest) 下载 `Altools.zip`；每次推送到 `main` 都会自动发布一个。
 2. 解压到 **/Applications** 后打开。安装包没有经过公证，第一次需要右键 app 选择 **打开**。
 3. 按需授予权限：**辅助功能**（划词、粘贴回去、快捷键、读取菜单栏图标）、**屏幕录制**（截图）、日历和提醒事项（刘海）、自动化（Music 和 Spotify）。
 

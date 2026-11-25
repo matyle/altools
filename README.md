@@ -66,7 +66,7 @@ Every module and capability can be switched on or off, and searched.
 
 ## Install
 
-1. Download `Altools.zip` from [Releases](../../releases), or from the latest run under [Actions](../../actions).
+1. Download `Altools.zip` from the latest [Release](../../releases/latest); every push to `main` publishes one.
 2. Unzip it into **/Applications** and open it. Builds are not notarised, so the first time right-click the app and choose **Open**.
 3. Grant what you use when asked: **Accessibility** (selected text, paste-back, hotkeys, listing menu-bar icons), **Screen Recording** (capture), Calendar and Reminders (notch), Automation (Music and Spotify).
 
