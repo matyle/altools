@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Altools</string>
+	<key>CFBundleExecutable</key>
+	<string>Altools</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.altools.app</string>
+	<key>CFBundleName</key>
+	<string>Altools</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>local.altools.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>altools</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Altools shows the song playing in Music or Spotify in the notch and lets you pause or skip it. It only talks to these two players.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>The notch shows today's next meeting with a countdown and a Join button.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>The notch shows today's next meeting with a countdown and a Join button.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>The notch shows files as they finish downloading.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>The notch lists your to-dos from Reminders and adds new ones there.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>The notch lists your to-dos from Reminders and adds new ones there.</string>
+</dict>
+</plist>
