@@ -87,6 +87,8 @@ final class NotchModel: ObservableObject {
   var dismissCard: () -> Void = {}
   /// Set by the controller; opens what a notification card points at.
   var openNotification: (NotificationWatcher.Banner) -> Void = { _ in }
+  /// Set by the controller; a click on the collapsed island opens it.
+  var requestExpand: () -> Void = {}
   /// Notifications received this run, newest first; cleared when Altools quits.
   @Published var inbox: [NotificationWatcher.Banner] = []
   @Published var expanded = false
@@ -274,6 +276,7 @@ final class NotchController {
       .store(in: &cancellables)
     model.dismissCard = { [weak self] in self?.dismissCard() }
     model.openNotification = { [weak self] banner in self?.notifications.open(banner) }
+    model.requestExpand = { [weak self] in self?.expand(tab: .home) }
     if AppSettings.shared.notchNotifications { notifications.start() }
     meetingTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkMeetings() }
 
@@ -532,15 +535,13 @@ final class NotchController {
     }
     guard model.card == nil else { return }
     followPointer()
-    // A meeting countdown in the ears is clickable (it joins); everything else lets clicks through.
-    if case .meeting = model.activity {
-      window?.ignoresMouseEvents = !NSMouseInRect(mouse, rect(for: model.collapsedSize, padding: 2), false)
-    } else if window?.ignoresMouseEvents == false {
-      window?.ignoresMouseEvents = true
-    }
-    // Without a hardware notch the island's area is ordinary menu bar with icons in it; there
-    // it opens only with the pointer pushed against the top edge, so clicking icons doesn't trigger it.
-    let overNotch = model.hasNotch
+    // A visible island takes clicks (it opens, or joins a meeting); elsewhere they reach the menu bar.
+    let overIsland = NSMouseInRect(mouse, rect(for: model.collapsedSize, padding: 2), false)
+    let takesClicks = islandVisible && overIsland
+    if window?.ignoresMouseEvents == takesClicks { window?.ignoresMouseEvents = !takesClicks }
+    // An invisible island sits over ordinary menu bar with icons in it; there it opens only with
+    // the pointer pushed against the top edge, so clicking those icons doesn't trigger it.
+    let overNotch = islandVisible
       ? NSMouseInRect(mouse, rect(for: model.collapsedSize, padding: 4), false)
       : abs(mouse.x - islandCenterX) <= max(model.collapsedSize.width, 150) / 2 + 4 && mouse.y >= screen.frame.maxY - 2
     guard overNotch else {
@@ -560,6 +561,12 @@ final class NotchController {
     }
     expandWork = work
     DispatchQueue.main.asyncAfter(deadline: .now() + AppSettings.shared.notchHoverDelay, execute: work)
+  }
+
+  /// The collapsed island is on screen: a hardware notch, a drawn one, or live activity in the
+  /// ears. A drawn island steps aside while ⌘ is held (see NotchView.visible).
+  private var islandVisible: Bool {
+    model.hasNotch || ((model.drawsNotch || model.activity != nil) && !model.commandHeld)
   }
 
   /// Opens the island on `tab` (Home unless a file is being dropped or a shortcut asks for another).

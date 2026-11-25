@@ -26,7 +26,6 @@ final class NotchSpacer {
     guard item == nil else { return }
     let item = NSStatusBar.system.statusItem(withLength: Self.minimum)
     item.autosaveName = "altools.notch.spacer"
-    item.button?.toolTip = "Notch spacer: ⌘-drag this to just left of the first icon past the island"
     item.button?.setAccessibilityLabel("Notch spacer")
     self.item = item
     timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.fit() }
@@ -56,6 +55,7 @@ final class NotchSpacer {
 
   /// The spacer is blank space; its handle shows only while ⌘ is held, when it can be dragged.
   private func showHandle(_ visible: Bool) {
+    item?.button?.toolTip = visible ? "Notch spacer: ⌘-drag this to just left of the first icon past the island" : nil
     item?.button?.image = visible
       ? NSImage(systemSymbolName: "arrow.left.and.right", accessibilityDescription: "Notch spacer")?
         .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))

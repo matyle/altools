@@ -43,6 +43,7 @@ struct NotchView: View {
     VStack(spacing: 0) {
       ZStack(alignment: .top) {
         NotchShape(bottomRadius: model.expanded ? 26 : model.card != nil ? 22 : 10).fill(Color.black)
+          .onTapGesture { if !model.expanded, model.card == nil { model.requestExpand() } }
         if model.expanded {
           ExpandedNotch(model: model, actions: actions)
             .padding(.top, model.notchSize.height)
@@ -106,7 +107,7 @@ private struct Ears: View {
     .lineLimit(1)
     .contentShape(Rectangle())
     .onTapGesture {
-      guard case .meeting(let meeting) = activity else { return }
+      guard case .meeting(let meeting) = activity else { return model.requestExpand() }
       if let url = meeting.joinURL { RemindersStore.join(url) } else { CalendarStore().openCalendarApp() }
     }
     .help(helpText)
