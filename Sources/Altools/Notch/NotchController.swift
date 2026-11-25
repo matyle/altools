@@ -85,6 +85,8 @@ final class NotchModel: ObservableObject {
   @Published var card: Card?
   /// Set by the controller; closes the card early.
   var dismissCard: () -> Void = {}
+  /// Set by the controller; opens what a notification card points at.
+  var openNotification: (NotificationWatcher.Banner) -> Void = { _ in }
   /// Notifications received this run, newest first; cleared when Altools quits.
   @Published var inbox: [NotificationWatcher.Banner] = []
   @Published var expanded = false
@@ -271,6 +273,7 @@ final class NotchController {
       }
       .store(in: &cancellables)
     model.dismissCard = { [weak self] in self?.dismissCard() }
+    model.openNotification = { [weak self] banner in self?.notifications.open(banner) }
     if AppSettings.shared.notchNotifications { notifications.start() }
     meetingTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkMeetings() }
 

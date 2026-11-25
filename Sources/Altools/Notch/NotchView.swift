@@ -50,7 +50,7 @@ struct NotchView: View {
             .padding(.bottom, 12)
             .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
         } else if let card = model.card {
-          CardView(card: card, dismiss: model.dismissCard)
+          CardView(card: card, dismiss: model.dismissCard, openNotification: model.openNotification)
             .padding(.top, model.notchSize.height)
             .padding(.horizontal, 16)
             .padding(.bottom, 10)
@@ -360,6 +360,7 @@ struct NotchSectionTitle: View {
 private struct CardView: View {
   let card: NotchModel.Card
   let dismiss: () -> Void
+  let openNotification: (NotificationWatcher.Banner) -> Void
 
   var body: some View {
     HStack(spacing: 12) {
@@ -434,9 +435,7 @@ private struct CardView: View {
 
   @ViewBuilder private func notificationCard(_ banner: NotificationWatcher.Banner) -> some View {
     Button {
-      if let id = banner.bundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
-        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
-      }
+      openNotification(banner)
       dismiss()
     } label: {
       HStack(spacing: 12) {

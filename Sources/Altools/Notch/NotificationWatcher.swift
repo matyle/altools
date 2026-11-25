@@ -17,6 +17,8 @@ final class NotificationWatcher {
   var onBanner: ((Banner) -> Void)?
   private var timer: Timer?
   private var seen: Set<String> = []
+  /// The on-screen banner behind each reported Banner, so a click can press it; the newest 30.
+  private var elements: [(id: UUID, element: AXUIElement)] = []
 
   func start() {
     timer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { [weak self] _ in self?.scan() }
@@ -44,12 +46,33 @@ final class NotificationWatcher {
         current.insert(key)
         // Banners already on screen when Altools starts are old news.
         guard primed, !seen.contains(key), let banner = Self.makeBanner(group) else { continue }
+        elements.append((banner.id, group))
+        if elements.count > 30 { elements.removeFirst() }
         onBanner?(banner)
       }
     }
     // Forget banners that left the screen; each banner has its own identifier, so a repeat message still counts.
     seen = current
     primed = true
+  }
+
+  /// Opens what the notification points at. Pressing the system banner lets the sending app
+  /// handle it as a click on the notification (a chat app opens that conversation); once the
+  /// banner has left the screen that no longer works, and the app is opened instead.
+  func open(_ banner: Banner) {
+    if let element = elements.first(where: { $0.id == banner.id })?.element, Self.press(element) { return }
+    if let id = banner.bundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+      NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+  }
+
+  /// AXPress, or the banner's "Show" action where AXPress isn't offered.
+  private static func press(_ element: AXUIElement) -> Bool {
+    if AXUIElementPerformAction(element, kAXPressAction as CFString) == .success { return true }
+    var names: CFArray?
+    guard AXUIElementCopyActionNames(element, &names) == .success, let actions = names as? [String] else { return false }
+    let show = actions.first { $0.contains("Show") || $0.contains("显示") || $0.contains("打开") }
+    return show.map { AXUIElementPerformAction(element, $0 as CFString) == .success } ?? false
   }
 
   /// Elements whose subrole marks them as a notification banner (AXNotificationCenterBanner).
