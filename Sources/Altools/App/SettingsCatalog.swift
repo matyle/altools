@@ -155,11 +155,14 @@ enum SettingsCatalog {
       ModuleSpec(
         id: "menubar", name: "Menu Bar", symbol: "menubar.rectangle", tint: Color(hex: 0x6366F1),
         tagline: "Tuck away the menu-bar icons you rarely need, one click to bring them back",
-        flow: "⌘-drag icons across the │ lines: shown / hidden / always hidden → click ••• , ⌥B or hover to reach them",
+        flow: "Sort apps into shown / hidden / always hidden → click the entry, ⌥B or hover the empty menu bar to reach them",
         hotkeys: ["⌥B"], enabled: bind(\.hiderEnabled),
         capabilities: [
-          CapabilitySpec(key: "reveal", title: "Reveal the hidden band",
-                         detail: "Click the entry icon or press ⌥B to show the icons left of the │ line, click again to tuck them away.",
+          CapabilitySpec(key: "layout", title: "Menu bar layout",
+                         detail: "Put each app's icons in Shown, Hidden or Always hidden; macOS stops drawing the hidden ones, nothing moves.",
+                         settings: AnyView(MenuBarLayoutCard())),
+          CapabilitySpec(key: "reveal", title: "Reveal hidden icons",
+                         detail: "Click the entry icon or press ⌥B to show the hidden icons, click again to tuck them away.",
                          hotkey: "⌥B",
                          settings: AnyView(SettingsCard {
                            SettingsRow("Entry icon") { EntryIconPicker(selection: bind(\.hiderIcon)) }
@@ -179,7 +182,14 @@ enum SettingsCatalog {
                                           options: [(3.0, "3 sec"), (5.0, "5 sec"), (10.0, "10 sec"), (30.0, "30 sec"), (0.0, "Never")])
                          } })),
           CapabilitySpec(key: "always", title: "Always hidden",
-                         detail: "Icons left of the second │ line stay out of sight even when the band is shown; double-click the entry to see them."),
+                         detail: "Apps in Always hidden stay out of sight when you reveal; double-click or ⌥-click the entry to see them too."),
+          CapabilitySpec(key: "system", title: "Remove icons for good",
+                         detail: "System Settings › Menu Bar has a switch per app icon; an icon switched off there stays off even when you reveal.",
+                         settings: AnyView(SettingsCard {
+                           SettingsRow("Allow in the Menu Bar") {
+                             Button("Open System Settings") { MenuBarHider.openSystemMenuBarSettings() }.buttonStyle(SoftPillButtonStyle())
+                           }
+                         })),
         ]),
     ]
     for index in modules.indices {
@@ -205,7 +215,7 @@ enum SettingsCatalog {
                        SettingsRow("Show on") {
                          SettingsPicker(selection: bind(\.notchAllDisplays), options: [(true, "All displays"), (false, "The notched display")])
                        }
-                       SettingsRow("Draw a notch on displays without one") { PillToggle(isOn: bind(\.notchDrawOnExternal)) }
+                       SettingsRow("Draw a notch at rest on displays without one", note: "Off: the island shows only for live activity, leaving the menu-bar icons uncovered.") { PillToggle(isOn: bind(\.notchDrawOnExternal)) }
                      })),
       CapabilitySpec(key: "nowplaying", title: "Now playing",
                      detail: "Any player's cover, title and progress in the ears — NetEase, QQ Music, a browser; controls and scrubbing when open.",
@@ -219,13 +229,19 @@ enum SettingsCatalog {
                      detail: "When another app's banner appears, the notch shows who it is from; click to open the app. Reads only the banner's text, never stores or sends it.",
                      toggle: bind(\.notchNotifications), requirement: .accessibility),
       CapabilitySpec(key: "meetings", title: "Meetings",
-                     detail: "A countdown in the ears from five minutes before; a card drops down with Join, which opens Zoom or Teams directly.",
+                     detail: "A countdown in the ears from one minute before (click it to join); a card drops down with Join, which opens Zoom or Teams directly.",
                      toggle: cap("notch.meetings"), requirement: .calendar),
       CapabilitySpec(key: "volume", title: "Volume", detail: "Volume keys show a level bar in the notch, for speakers or AirPods.", toggle: cap("notch.volume")),
       CapabilitySpec(key: "power", title: "Battery", detail: "Shown for 2.5 s when the cable goes in or out; at 10% or less it stays until power is back.", toggle: cap("notch.power")),
       CapabilitySpec(key: "input", title: "Input source & Caps Lock", detail: "Switching input source or Caps Lock flashes the new state.", toggle: cap("notch.input")),
       CapabilitySpec(key: "sensors", title: "Camera & microphone", detail: "Green while an app has the camera, orange with the app name while one records audio.", toggle: cap("notch.sensors")),
       CapabilitySpec(key: "downloads", title: "Finished downloads", detail: "When a download or AirDrop lands in Downloads, the notch shows the file.", toggle: cap("notch.downloads")),
+      CapabilitySpec(key: "ticker", title: "Crypto price",
+                     detail: "When nothing else is live, the ears show a live price and its 24h change, streamed from Binance's public market data through your proxy.",
+                     toggle: cap("notch.ticker"), value: settings.tickerSymbol,
+                     settings: AnyView(SettingsCard { SettingsRow("Trading pair", note: "Any Binance spot pair, e.g. BTCUSDT, ETHUSDT, SOLUSDT.") {
+                       SettingsTextField(text: Binding(get: { settings.tickerSymbol }, set: { settings.tickerSymbol = $0 }), prompt: "BTCUSDT")
+                     } })),
       CapabilitySpec(key: "receipts", title: "Receipts", detail: "Screenshots, picked colours and recognized text report in the notch instead of a toast.", toggle: cap("notch.receipts")),
       CapabilitySpec(key: "todo", title: "To-do", detail: "Your Reminders: overdue, today and the next 7 days; the input understands “tomorrow 3pm”.",
                      toggle: cap("notch.todo"), requirement: .reminders,

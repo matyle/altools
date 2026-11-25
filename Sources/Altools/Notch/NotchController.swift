@@ -49,6 +49,7 @@ final class NotchModel: ObservableObject {
     case sensors(SystemSignals.Sensors)
     case ai
     case music
+    case ticker(CryptoTicker.Quote)
 
     /// Width of each ear beside the notch.
     var earWidth: CGFloat {
@@ -66,6 +67,7 @@ final class NotchModel: ObservableObject {
       case .sensors(let s): s.microphoneApp != nil ? 80 : 36
       case .ai: 36
       case .music: 36
+      case .ticker: 60
       }
     }
   }
@@ -104,6 +106,7 @@ final class NotchModel: ObservableObject {
   let notes = NotesStore()
   let usage = AIUsage()
   let signals = SystemSignals()
+  let ticker = CryptoTicker()
   let center = ActivityCenter.shared
 
   private var flashWork: DispatchWorkItem?
@@ -116,6 +119,7 @@ final class NotchModel: ObservableObject {
     if on("notch.sensors"), signals.sensors.active { return .sensors(signals.sensors) }
     if center.aiRunning > 0 { return .ai }
     if on("notch.nowplaying"), nowPlaying.track?.isPlaying == true { return .music }
+    if on("notch.ticker"), let quote = ticker.freshQuote { return .ticker(quote) }
     return nil
   }
 
@@ -178,6 +182,8 @@ final class NotchController {
   private let windowSize = CGSize(width: 640, height: 280)
   private let volume = VolumeMonitor()
   private let spacer = NotchSpacer()
+  var spacerDescription: String { spacer.debugDescription }
+
   private let notifications = NotificationWatcher()
   private var cardWork: DispatchWorkItem?
   private var meetingTimer: Timer?
@@ -228,6 +234,15 @@ final class NotchController {
     }
     model.signals.start()
     if AppSettings.shared.notchAllDisplays { spacer.start() }
+    // The price streams only while its capability is on; the symbol can change any time.
+    AppSettings.shared.$tickerSymbol.combineLatest(AppSettings.shared.$disabledCapabilities)
+      .map { symbol, disabled in disabled.contains("notch.ticker") ? nil : symbol }
+      .removeDuplicates()
+      .debounce(for: .milliseconds(400), scheduler: DispatchQueue.main)
+      .sink { [weak self] symbol in
+        if let symbol { self?.model.ticker.start(symbol: symbol) } else { self?.model.ticker.stop() }
+      }
+      .store(in: &cancellables)
     volume.onChange = { [weak self] level in if on("notch.volume") { self?.model.show(.volume(level), for: 1.6) } }
     volume.start()
     notifications.onBanner = { [weak self] banner in self?.receive(banner) }
@@ -248,6 +263,7 @@ final class NotchController {
     let flags: (NSEvent) -> Void = { [weak self] event in
       let held = event.modifierFlags.contains(.command)
       if self?.model.commandHeld != held { self?.model.commandHeld = held }
+      if held { self?.watchCommandRelease() }
     }
     if let global = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flags) { monitors.append(global) }
     if let local = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged, handler: { flags($0); return $0 }) { monitors.append(local) }
@@ -277,6 +293,7 @@ final class NotchController {
       model.reminders.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.signals.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.center.objectWillChange.map { _ in }.eraseToAnyPublisher(),
+      model.ticker.objectWillChange.map { _ in }.eraseToAnyPublisher(),
     ]
     Publishers.MergeMany(sources)
       .receive(on: DispatchQueue.main)
@@ -295,6 +312,7 @@ final class NotchController {
     monitors = []
     cancellables = []
     model.nowPlaying.stop()
+    model.ticker.stop()
     model.signals.stop()
     volume.stop()
     spacer.stop()
@@ -304,6 +322,19 @@ final class NotchController {
     model.center.notchActive = false
     window?.orderOut(nil)
     window = nil
+  }
+
+  /// A key remapper (e.g. Karabiner) can release ⌘ without a flags-changed event reaching
+  /// Altools; re-check the real keyboard state until ⌘ is up, so the island never stays hidden.
+  private func watchCommandRelease() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+      guard let self, self.model.commandHeld else { return }
+      if CGEventSource.flagsState(.combinedSessionState).contains(.maskCommand) {
+        self.watchCommandRelease()
+      } else {
+        self.model.commandHeld = false
+      }
+    }
   }
 
   func toggleExpanded() {
@@ -358,7 +389,7 @@ final class NotchController {
       model.drawsNotch = AppSettings.shared.notchAllDisplays && AppSettings.shared.notchDrawOnExternal
       model.hasNotch = false
       // The menu bar's height on this display; 0 when it has none (one menu bar across displays).
-      model.notchSize = CGSize(width: 150, height: max(frame.maxY - screen.visibleFrame.maxY, 24))
+      model.notchSize = CGSize(width: 110, height: max(frame.maxY - screen.visibleFrame.maxY, 24))
     }
     islandCenterX = frame.midX
     let x = min(max(islandCenterX - windowSize.width / 2, frame.minX), frame.maxX - windowSize.width)
@@ -392,17 +423,17 @@ final class NotchController {
     showCard(.notification(banner), for: 6)
   }
 
-  /// Reminds once five minutes before a meeting and once when it starts.
+  /// Reminds once a minute before a meeting and once when it starts.
   private func checkMeetings() {
     guard AppSettings.shared.isOn("notch.meetings") else { return }
     let now = Date()
     for meeting in model.reminders.meetings {
       let untilStart = meeting.start.timeIntervalSince(now)
       let stage: String
-      if untilStart <= 0, untilStart > -120 { stage = "start" } else if untilStart > 0, untilStart <= 300 { stage = "five" } else { continue }
+      if untilStart <= 0, untilStart > -120 { stage = "start" } else if untilStart > 0, untilStart <= 60 { stage = "soon" } else { continue }
       let key = "\(meeting.id)|\(stage)"
       guard announcedMeetings.insert(key).inserted else { continue }
-      if stage == "start" { announcedMeetings.insert("\(meeting.id)|five") }
+      if stage == "start" { announcedMeetings.insert("\(meeting.id)|soon") }
       showCard(.meeting(meeting, startingNow: stage == "start"), for: 20)
     }
   }
@@ -465,9 +496,15 @@ final class NotchController {
     }
     guard model.card == nil else { return }
     followPointer()
+    // A meeting countdown in the ears is clickable (it joins); everything else lets clicks through.
+    if case .meeting = model.activity {
+      window?.ignoresMouseEvents = !NSMouseInRect(mouse, rect(for: model.collapsedSize, padding: 2), false)
+    } else if window?.ignoresMouseEvents == false {
+      window?.ignoresMouseEvents = true
+    }
     // Without a hardware notch the island's area is ordinary menu bar with icons in it; there
     // it opens only with the pointer pushed against the top edge, so clicking icons doesn't trigger it.
-    let overNotch = model.hasNotch || model.drawsNotch
+    let overNotch = model.hasNotch
       ? NSMouseInRect(mouse, rect(for: model.collapsedSize, padding: 4), false)
       : abs(mouse.x - islandCenterX) <= max(model.collapsedSize.width, 150) / 2 + 4 && mouse.y >= screen.frame.maxY - 2
     guard overNotch else {

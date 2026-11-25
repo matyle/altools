@@ -227,10 +227,10 @@ final class RemindersStore: ObservableObject {
       }
   }
 
-  /// The soonest meeting starting within five minutes, or one in progress.
+  /// The soonest meeting starting within a minute, or one that started in the last five.
   var imminentMeeting: Meeting? {
     let now = Date()
-    return meetings.first { $0.start <= now.addingTimeInterval(300) && $0.end > now }
+    return meetings.first { $0.start <= now.addingTimeInterval(60) && $0.start > now.addingTimeInterval(-300) && $0.end > now }
   }
 
   private static let meetingHosts = ["zoom.us", "meet.google.com", "teams.microsoft.com", "teams.live.com",

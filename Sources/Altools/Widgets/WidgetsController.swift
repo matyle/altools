@@ -62,7 +62,7 @@ final class WidgetsController {
       let order = Kind.allCases.firstIndex(of: kind) ?? 0
       UserDefaults.standard.set(310 + order * 10, forKey: positionKey)
     }
-    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    let item = NSStatusBar.system.statusItem(withLength: Self.widths[kind] ?? NSStatusItem.variableLength)
     item.autosaveName = "altools.widget.\(kind.rawValue)"
     item.button?.target = self
     item.button?.action = #selector(clicked(_:))
@@ -108,7 +108,12 @@ final class WidgetsController {
 
   // MARK: Titles
 
+  /// The network item keeps a fixed width: its rates change every second and would jitter the icons to its left.
+  private static let widths: [Kind: CGFloat] = [.network: 66]
+
   private func refreshTitles() {
+    // Hold still while the user may be ⌘-dragging icons.
+    guard NSEvent.pressedMouseButtons == 0, !NSEvent.modifierFlags.contains(.command) else { return }
     if let button = items[.system]?.button {
       button.image = symbol("cpu")
       button.imagePosition = .imageLeading

@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Test
+        run: swift test
+
+      # No signing certificate on the runner, so the app is signed ad-hoc: macOS asks for
+      # Accessibility and Screen Recording again after each install.
+      - name: Build app
+        run: scripts/build-app.sh release
+
+      - name: Package
+        run: ditto -c -k --keepParent build/Altools.app Altools.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Altools
+          path: Altools.zip
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" Altools.zip --generate-notes

@@ -52,8 +52,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     settings.$hiderEnabled.removeDuplicates()
       .sink { [weak self] on in on ? self?.hider.start() : self?.hider.stop() }
       .store(in: &cancellables)
-    settings.$hiderIcon.dropFirst()
-      .sink { [weak self] _ in DispatchQueue.main.async { self?.hider.refreshIcon() } }
+    settings.$hiderIcon.map { _ in () }.merge(with: settings.$hiderSections.map { _ in () }).dropFirst()
+      .sink { [weak self] _ in DispatchQueue.main.async { self?.hider.refresh() } }
       .store(in: &cancellables)
     settings.$selectionAutoPopup.merge(with: settings.$selectionEnabled).removeDuplicates()
       .sink { [weak self] _ in DispatchQueue.main.async { self?.selection.start() } }
@@ -72,6 +72,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
   }
 
+  func applicationWillTerminate(_ notification: Notification) {
+    hider.stop()
+  }
+
   private func registerHotKeys() {
     let center = HotKeyCenter.shared
     // Each shortcut does nothing while its module is switched off in Settings.
@@ -88,7 +92,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func setUpStatusItem() {
+    // Start beside the system icons (points from the right edge), where macOS drops it last when the bar is full.
+    let positionKey = "NSStatusItem Preferred Position altools.main"
+    if UserDefaults.standard.object(forKey: positionKey) == nil {
+      UserDefaults.standard.set(290, forKey: positionKey)
+    }
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    statusItem.autosaveName = "altools.main"
     statusItem.button?.image = NSImage(systemSymbolName: "square.grid.3x3.middle.filled", accessibilityDescription: "Altools")
     let actions = StatusActions(
       screenshot: { [weak self] in self?.capture.capture(then: .annotate) },

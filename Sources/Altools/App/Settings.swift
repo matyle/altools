@@ -30,7 +30,7 @@ final class AppSettings: ObservableObject {
   @Published var captureEnabled: Bool { didSet { save(captureEnabled, "captureEnabled") } }
   /// Capability keys ("notch.volume", "launcher.web", …) the user switched off; everything else is on.
   @Published var disabledCapabilities: Set<String> { didSet { save(Array(disabledCapabilities), "disabledCapabilities") } }
-  /// Hide menu bar icons placed left of a divider, revealed with a chevron.
+  /// Hide chosen apps' menu bar icons, revealed from the entry icon.
   @Published var hiderEnabled: Bool { didSet { save(hiderEnabled, "hiderEnabled") } }
   /// MenuBarHider.EntryIcon raw value for the menu bar entry.
   @Published var hiderIcon: String { didSet { save(hiderIcon, "hiderIcon") } }
@@ -43,6 +43,10 @@ final class AppSettings: ObservableObject {
   @Published var hiderHoverDelay: Double { didSet { save(hiderHoverDelay, "hiderHoverDelay") } }
   /// Hide revealed icons again after this many seconds; 0 keeps them shown.
   @Published var hiderAutoHideSeconds: Double { didSet { save(hiderAutoHideSeconds, "hiderAutoHideSeconds") } }
+  /// Bundle identifier → MenuBarHider.Section raw value; apps not listed are shown.
+  @Published var hiderSections: [String: String] { didSet { save(hiderSections, "hiderSections") } }
+  /// Display names of apps in hiderSections, for listing them while they aren't running.
+  @Published var hiderAppNames: [String: String] { didSet { save(hiderAppNames, "hiderAppNames") } }
   /// Show other apps' notification banners in the notch (read through Accessibility).
   @Published var notchNotifications: Bool { didSet { save(notchNotifications, "notchNotifications") } }
   /// Bundle IDs whose notifications stay out of the notch.
@@ -53,6 +57,8 @@ final class AppSettings: ObservableObject {
   @Published var notchHoverDelay: Double { didSet { save(notchHoverDelay, "notchHoverDelay") } }
   /// Read Now Playing for every player through the system bridge, not just Music and Spotify.
   @Published var notchSystemNowPlaying: Bool { didSet { save(notchSystemNowPlaying, "notchSystemNowPlaying") } }
+  /// Trading pair the notch shows when idle, e.g. BTCUSDT or ETHUSDT.
+  @Published var tickerSymbol: String { didSet { save(tickerSymbol, "tickerSymbol") } }
   /// Empty means ~/Documents/Altools Notes.
   @Published var notesFolder: String { didSet { save(notesFolder, "notesFolder") } }
   /// Reminders list for new to-dos by name; empty or unmatched uses the default list.
@@ -87,11 +93,14 @@ final class AppSettings: ObservableObject {
     hiderDoubleClickAll = defaults.object(forKey: "hiderDoubleClickAll") as? Bool ?? true
     hiderHover = defaults.object(forKey: "hiderHover") as? Bool ?? true
     hiderHoverDelay = defaults.object(forKey: "hiderHoverDelay") as? Double ?? 0.2
+    hiderSections = defaults.dictionary(forKey: "hiderSections") as? [String: String] ?? [:]
+    hiderAppNames = defaults.dictionary(forKey: "hiderAppNames") as? [String: String] ?? [:]
     notchNotifications = defaults.object(forKey: "notchNotifications") as? Bool ?? true
     notchMutedApps = defaults.stringArray(forKey: "notchMutedApps") ?? []
     notchDrawOnExternal = defaults.object(forKey: "notchDrawOnExternal") as? Bool ?? true
     notchSystemNowPlaying = defaults.object(forKey: "notchSystemNowPlaying") as? Bool ?? true
     notesFolder = defaults.string(forKey: "notesFolder") ?? ""
+    tickerSymbol = defaults.string(forKey: "tickerSymbol") ?? "BTCUSDT"
     todoList = defaults.string(forKey: "todoList") ?? ""
     claudeUsageConnected = defaults.object(forKey: "claudeUsageConnected") as? Bool ?? false
     selectionAutoPopup = defaults.object(forKey: "selectionAutoPopup") as? Bool ?? true

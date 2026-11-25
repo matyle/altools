@@ -82,6 +82,7 @@ struct NotchView: View {
     case .sensors: "sensors"
     case .ai: "ai"
     case .music: "music"
+    case .ticker: "ticker"
     }
   }
 }
@@ -103,6 +104,19 @@ private struct Ears: View {
     .font(.system(size: 11, weight: .semibold))
     .foregroundStyle(.white)
     .lineLimit(1)
+    .contentShape(Rectangle())
+    .onTapGesture {
+      guard case .meeting(let meeting) = activity else { return }
+      if let url = meeting.joinURL { RemindersStore.join(url) } else { CalendarStore().openCalendarApp() }
+    }
+    .help(helpText)
+  }
+
+  private var helpText: String {
+    if case .meeting(let meeting) = activity {
+      return meeting.joinURL == nil ? "\(meeting.title) — open Calendar" : "\(meeting.title) — click to join"
+    }
+    return ""
   }
 
   @ViewBuilder private var left: some View {
@@ -140,6 +154,13 @@ private struct Ears: View {
     case .ai:
       Image(systemName: "sparkles").foregroundStyle(.purple)
         .symbolEffect(.pulse, options: .repeating)
+    case .ticker(let quote):
+      // Bitcoin gets its symbol alone; other pairs show their short name.
+      if CryptoTicker.base(of: quote.symbol) == "BTC" {
+        Image(systemName: "bitcoinsign.circle.fill").foregroundStyle(.orange)
+      } else {
+        Text(CryptoTicker.base(of: quote.symbol)).foregroundStyle(.orange)
+      }
     case .music:
       Group {
         if let art = model.nowPlaying.artwork {
@@ -186,6 +207,16 @@ private struct Ears: View {
       }
     case .ai:
       ProgressView().controlSize(.mini).tint(.white)
+    case .ticker(let quote):
+      VStack(alignment: .trailing, spacing: -1) {
+        Text(CryptoTicker.format(quote.price))
+          .monospacedDigit()
+          .contentTransition(.numericText(value: quote.price))
+          .animation(.snappy, value: quote.price)
+        Text(String(format: "%@%.2f%%", quote.change >= 0 ? "+" : "", quote.change))
+          .font(.system(size: 8, weight: .semibold).monospacedDigit())
+          .foregroundStyle(quote.change >= 0 ? Color.green : Color.red)
+      }
     case .music:
       Image(systemName: "waveform")
         .foregroundStyle(.orange)

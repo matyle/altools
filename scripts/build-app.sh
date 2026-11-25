@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Builds Altools.app into ./build. Usage: scripts/build-app.sh [debug|release]
+# Builds Altools.app into ./build. Usage: scripts/build-app.sh [debug|release] [install]
+# "install" also copies it to /Applications, the copy to run: macOS 27 refuses menu bar
+# items from the ./build location.
 set -euo pipefail
 
 config="${1:-release}"
@@ -29,6 +31,12 @@ if security find-identity -p codesigning 2>/dev/null | grep -q '"Altools Dev"'; 
 fi
 identity="${ALTOOLS_SIGN_IDENTITY:-$default_identity}"
 codesign --force --sign "$identity" "$app/Contents/Frameworks/libAltoolsMedia.dylib"
-codesign --force --sign "$identity" --identifier local.altools.app "$app"
+codesign --force --sign "$identity" --identifier local.altools.menubar "$app"
 
 echo "Built $app (signed with: $identity)"
+
+if [[ "${2:-}" == "install" ]]; then
+  rm -rf /Applications/Altools.app
+  cp -R "$app" /Applications/Altools.app
+  echo "Installed /Applications/Altools.app"
+fi

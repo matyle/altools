@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Altools</string>
 	<key>CFBundleIdentifier</key>
-	<string>local.altools.app</string>
+	<string>local.altools.menubar</string>
 	<key>CFBundleName</key>
 	<string>Altools</string>
 	<key>CFBundlePackageType</key>
@@ -20,7 +20,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>local.altools.app</string>
+			<string>local.altools.menubar</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>altools</string>

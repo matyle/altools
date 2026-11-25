@@ -65,30 +65,31 @@ final class LiveSelfTest {
       if only == nil || only == "capture" { await captureFlow() }
       if only == "cards" { await cardsFlow() }
       if only == "menubar" { await menuBarFlow() }
+      if only == "notchshot" {
+        report.append("INFO  activity=\(String(describing: notch.model.activity).prefix(80)) commandHeld=\(notch.model.commandHeld) drawsNotch=\(notch.model.drawsNotch) flagsNow=\(NSEvent.modifierFlags.contains(.command))")
+        report.append("INFO  \(notch.spacerDescription)")
+        await shot(notch.window, "19-notch-idle")
+      }
       if only == "hider" {
-        // A new status item lands at the far left: left of both dividers, so it should hide.
-        let probe = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        probe.button?.title = "PROBE"
-        let app = NSApp.delegate as? AppDelegate
-        app?.toggleMenuBarHider()  // reveal, then collapse, so the dividers re-measure with the probe present
-        await wait(0.8)
-        app?.toggleMenuBarHider()
-        await wait(1.2)
-        func probeOnScreen() -> Bool {
-          guard let frame = probe.button?.window?.frame else { return false }
-          return NSScreen.screens.contains { $0.frame.intersects(frame) } && probe.button?.window?.occlusionState.contains(.visible) == true
+        // Hides one running app's icons through the system, checks they are gone, then restores the section.
+        let apps = MenuBarApp.current()
+        report.append("INFO  menu bar apps: \(apps.map(\.bundleID).joined(separator: " "))")
+        if let target = apps.first(where: { MenuBarHider.section(of: $0.bundleID) == .shown }) {
+          MenuBarHider.setSection(.hidden, for: target)
+          await wait(1.5)
+          let hiddenFrames = MenuBarApp.iconFrames(of: target.bundleID)
+          report.append("INFO  hidden \(target.bundleID) frames=\(hiddenFrames)")
+          let goneWhileHidden = !MenuBarApp.current().contains { $0.bundleID == target.bundleID }
+          report.append("INFO  \((NSApp.delegate as? AppDelegate)?.menuBarHiderFrames ?? "")")
+          MenuBarHider.setSection(.shown, for: target)
+          await wait(1.5)
+          report.append("INFO  shown \(target.bundleID) frames=\(MenuBarApp.iconFrames(of: target.bundleID))")
+          let backWhenShown = MenuBarApp.current().contains { $0.bundleID == target.bundleID }
+          check("\(target.name)'s icons hide", goneWhileHidden)
+          check("\(target.name)'s icons come back", backWhenShown)
+        } else {
+          report.append("INFO  no shown app with menu bar icons to test")
         }
-        report.append("INFO  collapsed: probe=\(probe.button?.window.map { NSStringFromRect($0.frame) } ?? "none") \(app?.menuBarHiderFrames ?? "")")
-        await runProcess("/usr/sbin/screencapture", ["-x", "-R", "0,0,1920,34", out.appendingPathComponent("15-hider-collapsed.png").path])
-        let hiddenWhenCollapsed = !probeOnScreen()
-        app?.toggleMenuBarHider()
-        await wait(1.0)
-        await runProcess("/usr/sbin/screencapture", ["-x", "-R", "0,0,1920,34", out.appendingPathComponent("16-hider-revealed.png").path])
-        report.append("INFO  revealed: probe=\(probe.button?.window.map { NSStringFromRect($0.frame) } ?? "none")")
-        check("hidden icons disappear when collapsed", hiddenWhenCollapsed)
-        app?.toggleMenuBarHider()
-        await wait(0.5)
-        NSStatusBar.system.removeStatusItem(probe)
       }
       if only == "widgets" {
         for kind in WidgetsController.Kind.allCases {
@@ -317,7 +318,15 @@ final class LiveSelfTest {
       let p = Process()
       p.executableURL = URL(fileURLWithPath: path)
       p.arguments = args
-      p.terminationHandler = { _ in cont.resume() }
+      let errors = Pipe()
+      p.standardError = errors
+      p.terminationHandler = { [weak self] proc in
+        let text = String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        if proc.terminationStatus != 0 {
+          DispatchQueue.main.async { self?.report.append("INFO  \((path as NSString).lastPathComponent) exit \(proc.terminationStatus): \(text.trimmingCharacters(in: .whitespacesAndNewlines))") }
+        }
+        cont.resume()
+      }
       do { try p.run() } catch { cont.resume() }
     }
   }
