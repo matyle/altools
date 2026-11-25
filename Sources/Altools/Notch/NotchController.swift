@@ -4,7 +4,7 @@ import SwiftUI
 
 final class NotchModel: ObservableObject {
   enum Tab: String, CaseIterable, Identifiable {
-    case home, media, todo, notes, shelf, usage
+    case home, media, todo, notes, shelf, usage, markets
     var id: String { rawValue }
     var title: String {
       switch self {
@@ -14,6 +14,7 @@ final class NotchModel: ObservableObject {
       case .notes: "Notes"
       case .shelf: "Shelf"
       case .usage: "AI usage"
+      case .markets: "Markets"
       }
     }
     var symbol: String {
@@ -24,6 +25,7 @@ final class NotchModel: ObservableObject {
       case .notes: "note.text"
       case .shelf: "tray.full.fill"
       case .usage: "gauge.with.dots.needle.67percent"
+      case .markets: "chart.line.uptrend.xyaxis"
       }
     }
   }
@@ -77,6 +79,7 @@ final class NotchModel: ObservableObject {
   enum Card: Equatable {
     case meeting(RemindersStore.Meeting, startingNow: Bool)
     case notification(NotificationWatcher.Banner)
+    case agent(AgentInbox.Item)
   }
 
   @Published var card: Card?
@@ -107,6 +110,8 @@ final class NotchModel: ObservableObject {
   let usage = AIUsage()
   let signals = SystemSignals()
   let ticker = CryptoTicker()
+  let agents = AgentInbox.shared
+  let markets = MarketStore()
   let center = ActivityCenter.shared
 
   private var flashWork: DispatchWorkItem?
@@ -246,6 +251,25 @@ final class NotchController {
     volume.onChange = { [weak self] level in if on("notch.volume") { self?.model.show(.volume(level), for: 1.6) } }
     volume.start()
     notifications.onBanner = { [weak self] banner in self?.receive(banner) }
+    model.markets.isVisible = { [weak self] in self?.model.expanded == true }
+    model.markets.start()
+    model.$expanded.removeDuplicates().filter { $0 }
+      .sink { [weak self] _ in if on("notch.markets") { self?.model.markets.refresh() } }
+      .store(in: &cancellables)
+    model.agents.onNew = { [weak self] item in self?.showCard(.agent(item), for: 12) }
+    if on("notch.agents") { model.agents.start() }
+    AppSettings.shared.$disabledCapabilities.map { !$0.contains("notch.agents") }.removeDuplicates().dropFirst()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] on in on ? self?.model.agents.start() : self?.model.agents.stop() }
+      .store(in: &cancellables)
+    // A card for an agent that was answered in the terminal goes away with it.
+    model.agents.$items
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] items in
+        guard let self, case .agent(let shown) = self.model.card, !items.contains(where: { $0.id == shown.id }) else { return }
+        self.dismissCard()
+      }
+      .store(in: &cancellables)
     model.dismissCard = { [weak self] in self?.dismissCard() }
     if AppSettings.shared.notchNotifications { notifications.start() }
     meetingTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.checkMeetings() }
@@ -313,6 +337,8 @@ final class NotchController {
     cancellables = []
     model.nowPlaying.stop()
     model.ticker.stop()
+    model.agents.stop()
+    model.markets.stop()
     model.signals.stop()
     volume.stop()
     spacer.stop()
@@ -447,10 +473,17 @@ final class NotchController {
 
   private func showCard(_ card: NotchModel.Card, for seconds: Double) {
     guard !model.expanded else { return }
+    // An agent card stays its full time; a newer agent may replace it, nothing else.
+    if case .agent = model.card, !isAgent(card) { return }
     followPointer()
     window?.ignoresMouseEvents = false
     withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { model.card = card }
     scheduleCardDismiss(after: seconds)
+  }
+
+  private func isAgent(_ card: NotchModel.Card) -> Bool {
+    if case .agent = card { return true }
+    return false
   }
 
   /// Hovering a card keeps it; it leaves a moment after the pointer does.

@@ -48,6 +48,7 @@ enum DebugRender {
                                         isPlaying: true, position: 98, duration: 243))
         model.reminders.loadDemo()
         model.usage.loadDemo()
+        model.markets.loadDemo()
         if let tab { model.tab = tab; model.expanded = true }
         setup(model)
         return AnyView(NotchView(model: model, actions: NotchActions()))
@@ -82,12 +83,17 @@ enum DebugRender {
       ("10c-notch-notes", CGSize(width: 760, height: 320), notch(.notes)),
       ("10d-notch-shelf", CGSize(width: 760, height: 320), notch(.shelf)),
       ("10e-notch-usage", CGSize(width: 760, height: 320), notch(.usage)),
+      ("10f-notch-markets", CGSize(width: 760, height: 320), notch(.markets)),
       ("11-notch-collapsed-playing", CGSize(width: 680, height: 80), notch(nil)),
       ("11b-notch-collapsed-meeting", CGSize(width: 680, height: 80), notch(nil) { $0.nowPlaying.loadDemo(.init(bundleID: "", title: "", artist: "", isPlaying: false, position: 0, duration: 0)) ; $0.reminders.loadDemo() }),
       ("11c-notch-collapsed-receipt", CGSize(width: 680, height: 80), notch(nil) { $0.loadDemoFlash(.receipt(.init(symbol: "eyedropper", title: "Copied #FF6B35", color: .orange))) }),
       ("11e-notch-volume", CGSize(width: 680, height: 80), notch(nil) { $0.loadDemoFlash(.volume(.init(volume: 0.62, muted: false, deviceName: "AirPods Pro", isHeadphones: true))) }),
       ("11f-notch-card-meeting", CGSize(width: 680, height: 140), notch(nil) { $0.card = .meeting(.init(id: "m", title: "Design sync", start: Date().addingTimeInterval(272), end: Date().addingTimeInterval(2000), color: .green, joinURL: URL(string: "https://acme.zoom.us/j/123456?pwd=x")), startingNow: false) }),
       ("11g-notch-card-notification", CGSize(width: 680, height: 140), notch(nil) { $0.card = .notification(.init(appName: "Messages", bundleID: "com.apple.MobileSMS", title: "Leo", body: "Are we still on for lunch? I booked the place near the office.")) }),
+      ("11h-notch-card-agent", CGSize(width: 680, height: 140), notch(nil) {
+        $0.card = .agent(.init(id: "1", kind: "approval", name: "api-server refactor", summary: "Run `swift test --filter Router` to check the new routes?",
+                                harness: "claude-code", session: "work", window: "demo", since: Date()))
+      }),
       ("11d-notch-collapsed-caps", CGSize(width: 680, height: 80), notch(nil) { $0.loadDemoFlash(.input(symbol: "capslock.fill", label: "Caps Lock")) }),
       ("20-settings-overview", CGSize(width: 1100, height: 720), { AnyView(SettingsRoot(actions: SettingsActions())) }),
       ("21-settings-notch", CGSize(width: 1100, height: 720), { AnyView(SettingsRoot(actions: SettingsActions(), page: .module("notch"))) }),

@@ -13,9 +13,19 @@ struct HomeTab: View {
           .onTapGesture { withAnimation(.snappy) { model.tab = .media } }
           .frame(width: 206)
         NotchCard(padding: 9) { agenda }
-        NotchCard(padding: 9) { clock }.frame(width: 100)
+        if AppSettings.shared.isOn("notch.markets") {
+          NotchCard(padding: 9) { MarketsSummary(markets: model.markets) }
+            .frame(width: 128)
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation(.snappy) { model.tab = .markets } }
+        }
       }
-      quickActions
+      // An agent waiting in tuios outranks the shortcuts; they come back once it's answered.
+      if AppSettings.shared.isOn("notch.agents"), !model.agents.items.isEmpty {
+        AgentStrip(agents: model.agents)
+      } else {
+        quickActions
+      }
     }
   }
 
@@ -95,20 +105,6 @@ struct HomeTab: View {
     }
   }
 
-  private var clock: some View {
-    TimelineView(.periodic(from: .now, by: 1)) { context in
-      VStack(alignment: .leading, spacing: 2) {
-        Text(context.date, format: .dateTime.hour().minute())
-          .font(.system(size: 20, weight: .semibold, design: .rounded))
-          .minimumScaleFactor(0.7)
-        Text(context.date, format: .dateTime.weekday(.wide))
-          .font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.7))
-        Text(context.date, format: .dateTime.month(.abbreviated).day())
-          .font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
-      }
-    }
-  }
-
   // MARK: Quick actions
 
   private var quickActions: some View {
@@ -179,6 +175,36 @@ struct PermissionChip: View {
         .background(Color.white.opacity(0.1), in: Capsule())
     }
     .buttonStyle(.plain)
+  }
+}
+
+/// The first agent waiting in tuios (blocked ones before finished ones), with how many
+/// more; click to jump to its pane.
+private struct AgentStrip: View {
+  @ObservedObject var agents: AgentInbox
+
+  var body: some View {
+    if let item = agents.items.first {
+      let tint: Color = item.isBlocking ? .orange : .green
+      Button { AgentInbox.open(item) } label: {
+        HStack(spacing: 7) {
+          Image(systemName: item.symbol).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
+          Text(item.name).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+          Text(item.title).font(.system(size: 10, weight: .medium)).foregroundStyle(tint).lineLimit(1)
+          Text(item.summary).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+          Spacer(minLength: 4)
+          if agents.items.count > 1 {
+            Text("+\(agents.items.count - 1)").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.6))
+          }
+          Image(systemName: "arrow.up.forward").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.5))
+        }
+        .padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 26)
+        .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .help(agents.items.map { "\($0.name): \($0.title)" }.joined(separator: "\n"))
+    }
   }
 }
 

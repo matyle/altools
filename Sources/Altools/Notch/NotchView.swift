@@ -268,6 +268,7 @@ private struct ExpandedNotch: View {
         case .notes: NotesTab(notes: model.notes)
         case .shelf: ShelfTab(shelf: model.shelf, actions: actions)
         case .usage: UsageTab(usage: model.usage)
+        case .markets: MarketsTab(markets: model.markets)
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -365,6 +366,7 @@ private struct CardView: View {
       switch card {
       case .meeting(let meeting, let startingNow): meetingCard(meeting, startingNow: startingNow)
       case .notification(let banner): notificationCard(banner)
+      case .agent(let item): agentCard(item)
       }
       Button(action: dismiss) {
         Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.5))
@@ -401,6 +403,33 @@ private struct CardView: View {
       }
       .buttonStyle(.plain)
     }
+  }
+
+  @ViewBuilder private func agentCard(_ item: AgentInbox.Item) -> some View {
+    Button {
+      AgentInbox.open(item)
+      dismiss()
+    } label: {
+      HStack(spacing: 12) {
+        let tint: Color = item.isBlocking ? .orange : .green
+        Image(systemName: item.symbol)
+          .font(.system(size: 15, weight: .semibold)).foregroundStyle(tint)
+          .frame(width: 36, height: 36).background(tint.opacity(0.2), in: RoundedRectangle(cornerRadius: 10))
+        VStack(alignment: .leading, spacing: 1) {
+          HStack(spacing: 6) {
+            Text(item.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+            Spacer(minLength: 4)
+            Text(item.title).font(.system(size: 10, weight: .medium)).foregroundStyle(tint).lineLimit(1)
+          }
+          if !item.summary.isEmpty {
+            Text(item.summary).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(2)
+          }
+        }
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .help("Open the pane in tuios")
   }
 
   @ViewBuilder private func notificationCard(_ banner: NotificationWatcher.Banner) -> some View {

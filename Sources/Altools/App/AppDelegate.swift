@@ -74,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   func applicationWillTerminate(_ notification: Notification) {
     hider.stop()
+    notch.stop()
   }
 
   private func registerHotKeys() {

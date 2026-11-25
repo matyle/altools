@@ -1,60 +1,100 @@
 # Altools
 
-A native macOS menu-bar toolkit: launcher, clipboard history, AI via Claude Code / Codex CLI,
-text-selection actions, screenshots with annotation / pin / OCR, and a notch panel.
+**English** · [简体中文](README.zh-CN.md)
 
-## Build & run
+A native macOS menu-bar toolkit: a launcher with clipboard history and AI, actions on selected text, screenshots with annotation and OCR, a notch island with live activity, menu-bar widgets, and a menu-bar icon hider. Written in Swift and SwiftUI, no Electron, no account.
 
-```sh
-scripts/build-app.sh            # → build/Altools.app (release)
-open build/Altools.app
-swift test                      # core logic tests
-```
+![Notch home](docs/screenshots/notch-home.png)
 
-Set `ALTOOLS_SIGN_IDENTITY` to a code-signing identity to keep macOS permissions across
-rebuilds; the default ad-hoc signature makes macOS treat every build as a new app.
+## Features
+
+### Notch island
+Hover the notch (or press ⌥N) for a panel with now playing, your next meeting and to-dos, a market watchlist and quick actions. While it is closed, the "ears" beside the notch show what is happening now: playback, a meeting countdown, volume, charging, camera and microphone use, finished downloads.
+
+- **Tabs:** Home, Media, To-do (Reminders), Notes (Markdown files), Shelf (drop files), AI usage, Markets.
+- **Agent alerts:** when an agent in a [tuios](https://tuios.dev/) pane needs approval, has a question, errors or finishes, a card drops from the notch; click it to jump to that pane.
+- **Markets:** crypto pairs, US and Hong Kong stocks; add them by name or code.
+- **AI usage:** Claude Code's 5-hour and weekly plan quotas, and tokens used today.
+- On displays without a notch it can draw one, or show only while something is live.
+
+| | |
+|---|---|
+| ![Markets](docs/screenshots/notch-markets.png) | ![AI usage](docs/screenshots/notch-ai-usage.png) |
+| ![Agent card](docs/screenshots/notch-agent-card.png) | |
+
+### Launcher
+⌥ Space opens one box for apps, commands, maths and clipboard history. Press ⇥ to ask AI through your local **Claude Code** or **Codex** CLI, with a chosen tool access level (none, read-only, edit files, full).
+
+| | |
+|---|---|
+| ![Launcher](docs/screenshots/launcher.png) | ![Ask AI](docs/screenshots/launcher-ai.png) |
+
+### Selected text
+Select text anywhere and a small bar offers copy, search, translate, explain, rewrite or a custom prompt; the result can replace the selection.
+
+![Translate a selection](docs/screenshots/selection-translate.png)
+
+### Capture
+⌥⇧A captures an area to annotate (rectangles, arrows, highlights, text), copy, save or pin on screen. ⌥⇧O copies the text in an area (on-device OCR with Vision).
+
+![Annotate](docs/screenshots/capture-annotate.png)
+
+### Menu bar
+- **Widgets:** CPU, battery, calendar and network speed, each opening its own panel.
+- **Hide icons (macOS 27):** sort apps into Shown, Hidden or Always hidden. Hidden icons disappear. Click the entry icon, press ⌥B or rest the pointer on the empty menu bar to bring them back.
+
+### Settings
+Every module and capability can be switched on or off, and searched.
+
+| | |
+|---|---|
+| ![Settings overview](docs/screenshots/settings-overview.png) | ![Notch settings](docs/screenshots/settings-notch.png) |
 
 ## Shortcuts
 
 | Keys | Action |
 |---|---|
-| ⌥ Space | Launcher (apps, commands, math, clipboard; ⇥ asks AI) |
+| ⌥ Space | Launcher |
 | ⌥⇧ Space | Ask AI |
-| ⌥⇧ V | Clipboard history (↩ paste, ⌘↩ copy, ⌘⌫ delete) |
-| ⌥⇧ A | Capture area → annotate (↩ copy, ⌘S save, Pin, Text) |
-| ⌥⇧ O | Capture area → copy recognized text |
-| ⌥⇧ S | Actions on selected text (also appears after selecting with the mouse) |
+| ⌥⇧ V | Clipboard history |
+| ⌥⇧ A | Capture area and annotate |
+| ⌥⇧ O | Capture text (OCR) |
+| ⌥⇧ S | Actions on selected text |
+| ⌥ N | Open the notch |
+| ⌥⇧ N | New note |
+| ⌥ B | Show hidden menu-bar icons |
 
-Hover the notch for now playing, battery, quick actions and a file shelf.
+## Install
 
-## Permissions
+1. Download `Altools.zip` from [Releases](../../releases), or from the latest run under [Actions](../../actions).
+2. Unzip it into **/Applications** and open it. Builds are not notarised, so the first time right-click the app and choose **Open**.
+3. Grant what you use when asked: **Accessibility** (selected text, paste-back, hotkeys, listing menu-bar icons), **Screen Recording** (capture), Calendar and Reminders (notch), Automation (Music and Spotify).
 
-- **Accessibility**: read selected text, paste results back.
-- **Screen Recording**: capture other apps' windows.
-- **Automation** (Music / Spotify): now playing in the notch.
+Run it from /Applications: macOS 27 refuses menu-bar items from apps running elsewhere, such as a build folder.
 
-## AI
+Requires macOS 14 or later. Hiding menu-bar icons needs macOS 27; it uses a private system framework and may stop working in a later macOS.
 
-Settings › AI picks Claude Code or Codex, the model, the agent's tool access
-(none / read-only / edit files / full) and an optional proxy. Text actions always run
-in a lightweight mode (no tools, hooks, plugins or saved session).
-
-## UI previews (debug builds)
-
-```sh
-scripts/build-app.sh debug
-ALTOOLS_RENDER_DIR=/tmp/altools-render build/Altools.app/Contents/MacOS/Altools
-```
-
-Renders every surface with demo data to PNGs off-screen, then quits.
-
-## Self-test (debug builds)
+## Build
 
 ```sh
-ALTOOLS_SELFTEST=1 build/Altools.app/Contents/MacOS/Altools        # add ALTOOLS_SELFTEST_AI=0 to skip CLI calls
+scripts/build-app.sh                  # build/Altools.app (release)
+scripts/build-app.sh release install  # also copies it to /Applications
+swift test                            # core logic tests
 ```
 
-Exercises the real integrations without opening windows: hotkey registration, app search,
-calculator, clipboard capture / skip / restore (your clipboard is put back), Vision OCR,
-annotation export, proxy detection, Claude quick + agent mode with tools and session resume,
-read-only enforcement, and Codex error reporting.
+Without a signing certificate the app is signed ad hoc, so macOS asks for permissions again after each build. Set `ALTOOLS_SIGN_IDENTITY` to a code-signing identity to keep them.
+
+The screenshots above are rendered with demo data from a debug build:
+
+```sh
+swift build -c debug
+ALTOOLS_RENDER_DIR=/tmp/altools-render "$(swift build -c debug --show-bin-path)/Altools"
+```
+
+## Privacy
+
+- Everything runs on your Mac. Altools has no server, no analytics and no account.
+- AI requests go through the Claude Code or Codex CLI you already have, with its own sign-in.
+- Clipboard history stays local and skips items password managers mark as secret.
+- Notification text is read to show the card and is never stored or sent.
+- Network requests: market prices (Binance for crypto, Tencent's public quote service for stocks), and Claude Code's usage endpoint when you connect AI usage.

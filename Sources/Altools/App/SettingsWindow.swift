@@ -4,14 +4,43 @@ import EventKit
 import ServiceManagement
 import SwiftUI
 
+/// One Dark: blue-grey surfaces, soft grey text, blue accent. Each module takes one of the
+/// palette's syntax colours, shown as a coloured symbol on a faint tint of itself.
 enum Theme {
-  static let background = Color(hex: 0x0E1018)
-  static let sidebar = Color(hex: 0x0B0C12)
-  static let card = Color.white.opacity(0.035)
-  static let cardBorder = Color.white.opacity(0.07)
-  static let dim = Color.white.opacity(0.5)
-  static let faint = Color.white.opacity(0.32)
-  static let accent = Color(hex: 0x4F6BFF)
+  static let background = Color(hex: 0x282C34)
+  static let sidebar = Color(hex: 0x21252B)
+  static let card = Color(hex: 0x2C313A)
+  static let cardBorder = Color(hex: 0x3E4451)
+  static let ink = Color(hex: 0xD7DAE0)
+  static let dim = Color(hex: 0xABB2BF).opacity(0.8)
+  static let faint = Color(hex: 0x5C6370)
+  static let iconFill = Color(hex: 0x3E4451).opacity(0.6)
+  static let accent = Color(hex: 0x61AFEF)
+  static let warning = Color(hex: 0xD19A66)
+
+  static let purple = Color(hex: 0xC678DD)
+  static let cyan = Color(hex: 0x56B6C2)
+  static let blue = Color(hex: 0x61AFEF)
+  static let red = Color(hex: 0xE06C75)
+  static let green = Color(hex: 0x98C379)
+  static let yellow = Color(hex: 0xE5C07B)
+  static let orange = Color(hex: 0xD19A66)
+}
+
+/// A coloured symbol on a faint tint of the same colour.
+struct TonalIcon: View {
+  let symbol: String
+  let tint: Color
+  var size: CGFloat = 30
+  var on = true
+
+  var body: some View {
+    Image(systemName: symbol)
+      .font(.system(size: size * 0.44, weight: .semibold))
+      .foregroundStyle(on ? tint : Theme.faint)
+      .frame(width: size, height: size)
+      .background((on ? tint : Theme.faint).opacity(0.16), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+  }
 }
 
 /// Quick actions the Overview's tiles trigger.
@@ -71,17 +100,15 @@ struct SettingsRoot: View {
     HStack(spacing: 0) {
       Sidebar(state: state, settings: settings, modules: modules)
         .frame(width: 236)
-      Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
+      Rectangle().fill(Theme.cardBorder).frame(width: 1)
       VStack(spacing: 0) {
         TopBar(state: state, modules: modules)
         content(modules)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
-    .background(
-      LinearGradient(colors: [Theme.background, Color(hex: 0x10121C)], startPoint: .top, endPoint: .bottom)
-    )
-    .foregroundStyle(.white)
+    .background(Theme.background)
+    .foregroundStyle(Theme.ink)
     .environment(\.colorScheme, .dark)
     .frame(minWidth: 940, minHeight: 620)
     .ignoresSafeArea()
@@ -124,16 +151,13 @@ private struct Sidebar: View {
           ForEach(modules) { module in
             SidebarRow(title: module.name, symbol: module.symbol, tint: module.tint, active: module.enabled.wrappedValue,
                        selected: state.page == .module(module.id)) { go(.module(module.id)) }
-              .overlay(alignment: .trailing) {
-                CapabilityBars(module: module, aiFound: state.aiFound).padding(.trailing, 12).allowsHitTesting(false)
-              }
           }
           sectionTitle("System").padding(.top, 14)
-          SidebarRow(title: "Shortcuts", symbol: "keyboard", tint: .gray, active: true, selected: state.page == .shortcuts) { go(.shortcuts) }
-          SidebarRow(title: "Permissions", symbol: "lock.shield", tint: .gray, active: true, selected: state.page == .permissions) { go(.permissions) }
-          SidebarRow(title: "AI Services", symbol: "sparkles", tint: .gray, active: true, selected: state.page == .ai) { go(.ai) }
-          SidebarRow(title: "General", symbol: "gearshape", tint: .gray, active: true, selected: state.page == .general) { go(.general) }
-          SidebarRow(title: "About", symbol: "info.circle", tint: .gray, active: true, selected: state.page == .about) { go(.about) }
+          SidebarRow(title: "Shortcuts", symbol: "keyboard", active: true, selected: state.page == .shortcuts) { go(.shortcuts) }
+          SidebarRow(title: "Permissions", symbol: "lock.shield", active: true, selected: state.page == .permissions) { go(.permissions) }
+          SidebarRow(title: "AI Services", symbol: "sparkles", active: true, selected: state.page == .ai) { go(.ai) }
+          SidebarRow(title: "General", symbol: "gearshape", active: true, selected: state.page == .general) { go(.general) }
+          SidebarRow(title: "About", symbol: "info.circle", active: true, selected: state.page == .about) { go(.about) }
         }
         .padding(.horizontal, 12)
       }
@@ -150,7 +174,7 @@ private struct Sidebar: View {
       set: { on in modules.forEach { $0.enabled.wrappedValue = on } }
     )
     return VStack(alignment: .leading, spacing: 12) {
-      Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
+      Rectangle().fill(Theme.cardBorder.opacity(0.6)).frame(height: 1)
       HStack(spacing: 6) {
         Circle().fill(running > 0 ? Color.green : .gray).frame(width: 7, height: 7)
         Text(running > 0 ? "Running ·" : "Paused ·").foregroundStyle(Theme.dim)
@@ -182,7 +206,7 @@ private struct Sidebar: View {
 private struct SidebarRow: View {
   let title: String
   let symbol: String
-  let tint: Color
+  var tint: Color = Theme.dim
   let active: Bool
   let selected: Bool
   let action: () -> Void
@@ -192,43 +216,20 @@ private struct SidebarRow: View {
     Button(action: action) {
       HStack(spacing: 10) {
         Image(systemName: symbol)
-          .font(.system(size: 11, weight: .semibold))
-          .foregroundStyle(active ? .white : Theme.dim)
-          .frame(width: 24, height: 24)
-          .background(active ? tint.gradient : Color.white.opacity(0.08).gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+          .font(.system(size: 13, weight: .regular))
+          .foregroundStyle(active ? tint : Theme.faint)
+          .frame(width: 20, height: 20)
         Text(title).font(.system(size: 13, weight: selected ? .semibold : .regular))
-          .foregroundStyle(active || selected ? .white : Theme.dim)
+          .foregroundStyle(active || selected ? Theme.ink : Theme.dim)
         Spacer()
       }
       .padding(.horizontal, 10).frame(height: 36)
-      .background(selected ? Color.white.opacity(0.07) : hovering ? Color.white.opacity(0.035) : .clear,
+      .background(selected ? Theme.cardBorder.opacity(0.6) : hovering ? Theme.cardBorder.opacity(0.3) : .clear,
                   in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-      .overlay(alignment: .leading) {
-        if selected { Capsule().fill(Theme.accent).frame(width: 3, height: 18).offset(x: -6) }
-      }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .onHover { hovering = $0 }
-  }
-}
-
-/// One small bar per capability: lit when live, outlined orange when blocked, dim when off.
-struct CapabilityBars: View {
-  let module: ModuleSpec
-  let aiFound: Bool
-  var height: CGFloat = 12
-
-  var body: some View {
-    HStack(spacing: 1.5) {
-      ForEach(module.capabilities) { capability in
-        let state = module.state(capability, aiFound: aiFound)
-        RoundedRectangle(cornerRadius: 1)
-          .fill(state == .on ? module.tint : module.tint.opacity(state == .blocked ? 0.25 : 0.18))
-          .overlay(RoundedRectangle(cornerRadius: 1).strokeBorder(state == .blocked ? Color.orange : .clear, lineWidth: 1))
-          .frame(width: 3, height: height)
-      }
-    }
   }
 }
 
@@ -261,10 +262,10 @@ private struct TopBar: View {
         if case .module(let id) = state.page, let module = modules.first(where: { $0.id == id }) {
           Circle().fill(module.enabled.wrappedValue ? module.tint : .gray).frame(width: 6, height: 6)
         }
-        Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.75))
+        Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.dim)
       }
       .padding(.horizontal, 12).frame(height: 28)
-      .background(Color.white.opacity(0.04), in: Capsule())
+      .background(Theme.card, in: Capsule())
       Spacer()
       HStack(spacing: 8) {
         Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(Theme.dim)
@@ -273,7 +274,7 @@ private struct TopBar: View {
         KeyCapLabel(text: "⌘F")
       }
       .padding(.horizontal, 12).frame(height: 32)
-      .background(Color.white.opacity(0.04), in: Capsule())
+      .background(Theme.card, in: Capsule())
       .overlay(Capsule().strokeBorder(Theme.cardBorder))
       .background(Button("") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden())
     }
@@ -373,8 +374,8 @@ private struct OverviewPage: View {
             ForEach(modules) { module in AssemblyRow(state: state, module: module) }
           }
           HStack(spacing: 18) {
-            legend(Color.white.opacity(0.75), "On")
-            legend(.clear, "Off", border: Color.white.opacity(0.3))
+            legend(Theme.accent, "On")
+            legend(.clear, "Off", border: Theme.faint)
             legend(.clear, "Blocked", border: .orange)
           }
           .font(.system(size: 12)).foregroundStyle(Theme.dim)
@@ -382,7 +383,7 @@ private struct OverviewPage: View {
           HStack(alignment: .top) {
             bigStat("\(running)", "/\(modules.count)", "modules running")
             bigStat("\(on)", "/\(total)", "capabilities assembled")
-            bigStat("\(on - live)", "", "to deal with", tint: on - live > 0 ? .orange : .white)
+            bigStat("\(on - live)", "", "to deal with", tint: on - live > 0 ? Theme.warning : Theme.ink)
           }
         }
         .padding(24)
@@ -400,7 +401,7 @@ private struct OverviewPage: View {
     }
   }
 
-  private func bigStat(_ value: String, _ suffix: String, _ label: String, tint: Color = .white) -> some View {
+  private func bigStat(_ value: String, _ suffix: String, _ label: String, tint: Color = Theme.ink) -> some View {
     VStack(alignment: .leading, spacing: 4) {
       HStack(alignment: .firstTextBaseline, spacing: 1) {
         Text(value).font(.system(size: 30, weight: .bold)).foregroundStyle(tint)
@@ -425,15 +426,15 @@ private struct QuickTiles: View {
 
   var body: some View {
     HStack(spacing: 0) {
-      tile("Area screenshot", "camera.viewfinder", Color(hex: 0xF97316), "⌥⇧A", actions.captureArea)
+      tile("Area screenshot", "camera.viewfinder", Theme.red, "⌥⇧A", actions.captureArea)
       divider
-      tile("Recognize text", "text.viewfinder", Color(hex: 0x3B82F6), "⌥⇧O", actions.recognizeText)
+      tile("Recognize text", "text.viewfinder", Theme.blue, "⌥⇧O", actions.recognizeText)
       divider
-      tile("Translate text", "character.bubble.fill", Color(hex: 0x2563EB), "⌥⇧S", actions.translate)
+      tile("Translate text", "character.bubble.fill", Theme.purple, "⌥⇧S", actions.translate)
       divider
-      tile("Colour picker", "eyedropper", Color(hex: 0xF59E0B), nil, actions.pickColor)
+      tile("Colour picker", "eyedropper", Theme.yellow, nil, actions.pickColor)
       divider
-      tile("Clipboard", "doc.on.clipboard.fill", Color(hex: 0xC026D3), "⌥⇧V", actions.openClipboard)
+      tile("Clipboard", "doc.on.clipboard.fill", Theme.cyan, "⌥⇧V", actions.openClipboard)
     }
     .background(Theme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.cardBorder))
@@ -446,8 +447,7 @@ private struct QuickTiles: View {
       // Icon and shortcut on top, the name below, so names fit in narrow windows.
       VStack(alignment: .leading, spacing: 10) {
         HStack {
-          Image(systemName: symbol).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-            .frame(width: 30, height: 30).background(tint.gradient, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+          TonalIcon(symbol: symbol, tint: tint)
           Spacer(minLength: 4)
           if let key { KeyCapLabel(text: key) }
         }
@@ -470,7 +470,7 @@ private struct AssemblyRow: View {
         HStack(spacing: 12) {
           ModuleIcon(module: module, size: 30)
           Text(module.name).font(.system(size: 15, weight: .medium))
-            .foregroundStyle(module.enabled.wrappedValue ? .white : Theme.dim)
+            .foregroundStyle(module.enabled.wrappedValue ? Theme.ink : Theme.dim)
           Text("\(counts.live)/\(module.capabilities.count)").font(.system(size: 13).monospacedDigit()).foregroundStyle(Theme.faint)
         }
         .contentShape(Rectangle())
@@ -482,8 +482,8 @@ private struct AssemblyRow: View {
           let s = module.state(capability, aiFound: state.aiFound)
           Button { state.open(capability) } label: {
             RoundedRectangle(cornerRadius: 4)
-              .fill(s == .on ? module.tint : s == .blocked ? Color.clear : module.tint.opacity(0.16))
-              .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(s == .blocked ? Color.orange : .clear, lineWidth: 1.5))
+              .fill(s == .on ? module.tint.opacity(0.85) : s == .blocked ? Color.clear : module.tint.opacity(0.14))
+              .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(s == .blocked ? Theme.warning : .clear, lineWidth: 1.5))
               .frame(width: 18, height: 18)
           }
           .buttonStyle(.plain)
@@ -510,7 +510,7 @@ private struct ModulePage: View {
             HStack(spacing: 12) {
               Image(systemName: "power").font(.system(size: 15)).foregroundStyle(Theme.dim)
               Text("The module is off, so none of these capabilities do anything for now — switch the power on and they come back exactly as they were.")
-                .font(.system(size: 13)).foregroundStyle(.white.opacity(0.75))
+                .font(.system(size: 13)).foregroundStyle(Theme.dim)
             }
             .padding(.horizontal, 18).padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -556,18 +556,18 @@ private struct ModuleHeader: View {
       ModuleIcon(module: module, size: 60)
       VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 12) {
-          Text(module.name).font(.system(size: 32, weight: .bold))
+          Text(module.name).font(.system(size: 26, weight: .semibold))
           HStack(spacing: 5) {
-            Circle().fill(on ? Color.green : .gray).frame(width: 6, height: 6)
-            Text(on ? "Running" : "Off").font(.system(size: 13, weight: .medium)).foregroundStyle(on ? .green : Theme.dim)
+            Circle().fill(on ? Theme.accent : Theme.faint).frame(width: 6, height: 6)
+            Text(on ? "Running" : "Off").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.dim)
           }
           .padding(.horizontal, 10).frame(height: 26)
-          .background((on ? Color.green : .gray).opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
+          .background(Theme.iconFill, in: RoundedRectangle(cornerRadius: 7))
         }
-        Text(module.tagline).font(.system(size: 15)).foregroundStyle(.white.opacity(0.7))
+        Text(module.tagline).font(.system(size: 15)).foregroundStyle(Theme.dim)
         HStack(spacing: 8) {
           Text("\(module.capabilities.count) capabilities · \(counts.on) on · \(counts.live) live")
-            .font(.system(size: 13)).foregroundStyle(.white.opacity(0.75))
+            .font(.system(size: 13)).foregroundStyle(Theme.dim)
             .padding(.horizontal, 12).frame(height: 28)
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.cardBorder))
           ForEach(module.hotkeys, id: \.self) { KeyCapLabel(text: $0) }
@@ -580,21 +580,17 @@ private struct ModuleHeader: View {
       Spacer()
       Button { module.enabled.wrappedValue.toggle() } label: {
         Image(systemName: "power").font(.system(size: 24, weight: .semibold))
-          .foregroundStyle(on ? .white : Theme.dim)
+          .foregroundStyle(on ? module.tint : Theme.dim)
           .frame(width: 64, height: 64)
-          .background(on ? module.tint.gradient : Color.white.opacity(0.08).gradient, in: Circle())
-          .shadow(color: on ? module.tint.opacity(0.55) : .clear, radius: 14)
+          .background(on ? module.tint.opacity(0.18) : Theme.iconFill, in: Circle())
+          .overlay(Circle().strokeBorder(on ? module.tint.opacity(0.5) : Theme.cardBorder, lineWidth: 1.5))
       }
       .buttonStyle(.plain)
       .help(on ? "Turn \(module.name) off" : "Turn \(module.name) on")
     }
     .padding(.horizontal, 40).padding(.top, 20).padding(.bottom, 22)
-    .background(
-      LinearGradient(colors: [module.tint.opacity(on ? 0.16 : 0.05), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
-    )
     .overlay(alignment: .bottom) {
-      Rectangle().fill(LinearGradient(colors: [module.tint.opacity(0.5), module.tint.opacity(0.05)], startPoint: .leading, endPoint: .trailing))
-        .frame(height: 1)
+      Rectangle().fill(Theme.cardBorder).frame(height: 1)
     }
   }
 }
@@ -609,41 +605,32 @@ private struct CapabilityRow: View {
 
   var body: some View {
     let state = module.state(capability, aiFound: aiFound)
-    HStack(alignment: .top, spacing: 22) {
-      VStack(spacing: 0) {
-        Text("\(index)").font(.system(size: 15, weight: .semibold).monospacedDigit())
-          .foregroundStyle(state == .on ? module.tint : Theme.dim)
-          .frame(width: 44, height: 44)
-          .background(state == .on ? module.tint.opacity(0.12) : Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 12))
-          .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(state == .on ? module.tint.opacity(0.7) : Theme.cardBorder, lineWidth: 1.2))
-        if !isLast {
-          DottedLine(vertical: true).stroke(state == .on ? module.tint.opacity(0.6) : Theme.cardBorder, style: StrokeStyle(lineWidth: 1.5, dash: [3, 4]))
-            .frame(width: 2).frame(maxHeight: .infinity)
-        }
-      }
-      VStack(alignment: .leading, spacing: 10) {
-        header(state)
-        Text(capability.detail).font(.system(size: 13)).foregroundStyle(Theme.dim)
-          .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 640, alignment: .leading)
-        if state == .blocked, let requirement = capability.requirement { BlockedNote(requirement: requirement) }
-        if let settings = capability.settings { settings.padding(.top, 2) }
-      }
-      .padding(.top, 10).padding(.bottom, 34)
+    VStack(alignment: .leading, spacing: 10) {
+      header(state)
+      if state == .blocked, let requirement = capability.requirement { BlockedNote(requirement: requirement) }
+      if let settings = capability.settings { settings.padding(.top, 2) }
     }
-    .padding(.horizontal, 10)
-    .background(highlighted ? module.tint.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 14))
+    .padding(.horizontal, 18).padding(.vertical, 14)
+    .background(highlighted ? Theme.accent.opacity(0.12) : Theme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.cardBorder))
+    .padding(.bottom, 10)
   }
 
   private func header(_ state: CapabilityState) -> some View {
-    HStack(spacing: 10) {
-      Text(capability.key).font(.system(size: 14, design: .monospaced)).foregroundStyle(Theme.faint)
-      Text(capability.title).font(.system(size: 16, weight: .semibold))
-      DottedLine(vertical: false).stroke(Color.white.opacity(0.14), style: StrokeStyle(lineWidth: 1.2, dash: [2, 4]))
-        .frame(height: 2).frame(minWidth: 20)
-      if let value = capability.value {
-        Text("= \(value)").font(.system(size: 13, design: .monospaced)).foregroundStyle(module.tint).lineLimit(1)
+    HStack(alignment: .top, spacing: 16) {
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 8) {
+          Text(capability.title).font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(state == .off ? Theme.dim : Theme.ink)
+          if let hotkey = capability.hotkey { KeyCapLabel(text: hotkey) }
+        }
+        Text(capability.detail).font(.system(size: 12)).foregroundStyle(Theme.dim)
+          .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 620, alignment: .leading)
       }
-      if let hotkey = capability.hotkey { KeyCapLabel(text: hotkey) }
+      Spacer(minLength: 12)
+      if let value = capability.value {
+        Text(value).font(.system(size: 12)).foregroundStyle(Theme.dim).lineLimit(1)
+      }
       if let toggle = capability.toggle {
         PillToggle(isOn: toggle, tint: Theme.accent)
       } else {
@@ -662,12 +649,12 @@ private struct BlockedNote: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-      Text("Needs \(requirement.label)").foregroundStyle(.orange)
+      Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
+      Text("Needs \(requirement.label)").foregroundStyle(Theme.warning)
       Button(buttonTitle, action: fix)
         .buttonStyle(.plain).font(.system(size: 12, weight: .semibold))
         .padding(.horizontal, 10).frame(height: 24)
-        .background(Color.orange.opacity(0.18), in: Capsule())
+        .background(Theme.warning.opacity(0.18), in: Capsule())
     }
     .font(.system(size: 12))
   }
@@ -847,7 +834,7 @@ private struct AboutPage: View {
     PageScaffold(title: "About", subtitle: "") {
       HStack(spacing: 18) {
         Image(systemName: "square.grid.3x3.middle.filled").font(.system(size: 30, weight: .semibold))
-          .frame(width: 72, height: 72).background(Theme.accent.gradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+          .frame(width: 72, height: 72).background(Theme.iconFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         VStack(alignment: .leading, spacing: 6) {
           Text("Altools").font(.system(size: 22, weight: .bold))
           Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")")
@@ -867,13 +854,7 @@ struct ModuleIcon: View {
   let size: CGFloat
 
   var body: some View {
-    let on = module.enabled.wrappedValue
-    Image(systemName: module.symbol)
-      .font(.system(size: size * 0.42, weight: .semibold))
-      .foregroundStyle(on ? .white : Theme.dim)
-      .frame(width: size, height: size)
-      .background(on ? module.tint.gradient : Color.white.opacity(0.07).gradient,
-                  in: RoundedRectangle(cornerRadius: size * 0.27, style: .continuous))
+    TonalIcon(symbol: module.symbol, tint: module.tint, size: size, on: module.enabled.wrappedValue)
   }
 }
 
@@ -885,7 +866,7 @@ struct SettingsCard<Content: View>: View {
       _VariadicView.Tree(DividedLayout()) { content }
     }
     .padding(.horizontal, 22)
-    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .background(Theme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.cardBorder))
     .frame(maxWidth: 760, alignment: .leading)
   }
@@ -919,7 +900,7 @@ struct SettingsRow<Control: View>: View {
     HStack(spacing: 14) {
       if let symbol {
         Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(Theme.dim).frame(width: 28, height: 28)
-          .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+          .background(Theme.card, in: RoundedRectangle(cornerRadius: 8))
       }
       VStack(alignment: .leading, spacing: 3) {
         Text(title).font(.system(size: 14))
@@ -941,7 +922,7 @@ struct PillToggle: View {
   var body: some View {
     Button { withAnimation(.snappy(duration: 0.18)) { isOn.toggle() } } label: {
       ZStack(alignment: isOn ? .trailing : .leading) {
-        Capsule().fill(isOn ? tint : Color.white.opacity(0.14)).frame(width: 42, height: 24)
+        Capsule().fill(isOn ? tint : Theme.cardBorder).frame(width: 42, height: 24)
         Circle().fill(.white).frame(width: 18, height: 18).padding(3)
           .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
       }
@@ -968,7 +949,7 @@ struct SettingsPicker<Value: Hashable>: View {
         Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.dim)
       }
       .padding(.horizontal, 12).frame(width: 220, height: 34)
-      .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9))
+      .background(Theme.card, in: RoundedRectangle(cornerRadius: 9))
       .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.cardBorder))
       .contentShape(Rectangle())
     }
@@ -987,7 +968,7 @@ struct SettingsTextField: View {
     TextField("", text: $text, prompt: Text(prompt).foregroundStyle(Theme.faint))
       .textFieldStyle(.plain).font(.system(size: 13))
       .padding(.horizontal, 12).frame(width: 260, height: 34)
-      .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9))
+      .background(Theme.card, in: RoundedRectangle(cornerRadius: 9))
       .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.cardBorder))
   }
 }
@@ -999,10 +980,10 @@ struct KeyCapLabel: View {
   var body: some View {
     Text(text)
       .font(.system(size: large ? 13 : 11, weight: .medium, design: .rounded))
-      .foregroundStyle(.white.opacity(0.75))
+      .foregroundStyle(Theme.dim)
       .padding(.horizontal, large ? 9 : 6).frame(height: large ? 26 : 20)
-      .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-      .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.white.opacity(0.12)))
+      .background(Theme.card, in: RoundedRectangle(cornerRadius: 6))
+      .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.cardBorder))
   }
 }
 
@@ -1022,27 +1003,13 @@ private struct HoverButton<Label: View>: View {
 
   var body: some View {
     Button(action: action) {
-      label.background(hovering ? Color.white.opacity(0.04) : .clear).contentShape(Rectangle())
+      label.background(hovering ? Theme.card : .clear).contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .onHover { hovering = $0 }
   }
 }
 
-private struct DottedLine: Shape {
-  let vertical: Bool
-  func path(in rect: CGRect) -> Path {
-    var p = Path()
-    if vertical {
-      p.move(to: CGPoint(x: rect.midX, y: rect.minY))
-      p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-    } else {
-      p.move(to: CGPoint(x: rect.minX, y: rect.midY))
-      p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-    }
-    return p
-  }
-}
 
 /// Segmented row of icon choices for the menu bar entry.
 struct EntryIconPicker: View {
@@ -1054,16 +1021,16 @@ struct EntryIconPicker: View {
         Button { selection = icon.rawValue } label: {
           Image(systemName: icon.symbol)
             .font(.system(size: icon == .dot ? 6 : 13, weight: .semibold))
-            .foregroundStyle(selection == icon.rawValue ? .white : Theme.dim)
+            .foregroundStyle(selection == icon.rawValue ? Theme.ink : Theme.dim)
             .frame(width: 38, height: 30)
-            .background(selection == icon.rawValue ? Color.white.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 7))
+            .background(selection == icon.rawValue ? Theme.cardBorder : .clear, in: RoundedRectangle(cornerRadius: 7))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
       }
     }
     .padding(3)
-    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+    .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.cardBorder))
   }
 }

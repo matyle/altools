@@ -80,7 +80,7 @@ enum SettingsCatalog {
 
     var modules = [
       ModuleSpec(
-        id: "launcher", name: "Launcher", symbol: "magnifyingglass", tint: Color(hex: 0xA855F7),
+        id: "launcher", name: "Launcher", symbol: "magnifyingglass", tint: Theme.purple,
         tagline: "Open apps, do maths, run commands and ask AI from one box",
         flow: "⌥Space → type → ↩ opens · ⇥ hands it to AI",
         hotkeys: ["⌥Space"], enabled: bind(\.launcherEnabled),
@@ -93,7 +93,7 @@ enum SettingsCatalog {
                          toggle: cap("launcher.ai"), hotkey: "⌥⇧Space", requirement: .aiCLI),
         ]),
       ModuleSpec(
-        id: "clipboard", name: "Clipboard", symbol: "doc.on.clipboard.fill", tint: Color(hex: 0x14B8A6),
+        id: "clipboard", name: "Clipboard", symbol: "doc.on.clipboard.fill", tint: Theme.cyan,
         tagline: "Everything you copy, searchable and one keystroke from pasting back",
         flow: "Copy anything → ⌥⇧V → ↩ pastes into the app you were in",
         hotkeys: ["⌥⇧V"], enabled: bind(\.clipboardEnabled),
@@ -103,7 +103,7 @@ enum SettingsCatalog {
           CapabilitySpec(key: "preview", title: "Preview", detail: "See the full text or image, where it came from and when, before pasting."),
         ]),
       ModuleSpec(
-        id: "selection", name: "Selection", symbol: "character.cursor.ibeam", tint: Color(hex: 0x3B82F6),
+        id: "selection", name: "Selection", symbol: "character.cursor.ibeam", tint: Theme.blue,
         tagline: "Select text in any app, then translate, polish, explain or transform it",
         flow: "Select text → the bar appears → pick an action → Replace or Copy",
         hotkeys: ["⌥⇧S"], enabled: bind(\.selectionEnabled),
@@ -119,7 +119,7 @@ enum SettingsCatalog {
           CapabilitySpec(key: "replace", title: "Replace in place", detail: "Puts the result back where the text was selected.", requirement: .accessibility),
         ]),
       ModuleSpec(
-        id: "capture", name: "Capture", symbol: "camera.fill", tint: Color(hex: 0xF97316),
+        id: "capture", name: "Capture", symbol: "camera.fill", tint: Theme.red,
         tagline: "Screenshot an area or window, mark it up, pin it, or pull out its text",
         flow: "⌥⇧A → drag an area (Space for a window) → annotate → Copy",
         hotkeys: ["⌥⇧A", "⌥⇧O"], enabled: bind(\.captureEnabled),
@@ -132,13 +132,13 @@ enum SettingsCatalog {
           CapabilitySpec(key: "save", title: "Save", detail: "⌘S saves into Pictures › Altools."),
         ]),
       ModuleSpec(
-        id: "notch", name: "Notch", symbol: "rectangle.topthird.inset.filled", tint: Color(hex: 0x2DD4BF),
+        id: "notch", name: "Notch", symbol: "rectangle.topthird.inset.filled", tint: Theme.green,
         tagline: "What is happening right now, beside the notch: playback, meetings, notifications, charging",
         flow: "An activity lands in the ears → hover or ⌥N opens → act on Home / drop files onto the shelf",
         hotkeys: ["⌥N", "⌥⇧N"], enabled: bind(\.notchEnabled),
         capabilities: notchCapabilities(settings, cap: cap, bind: bind)),
       ModuleSpec(
-        id: "widgets", name: "Widgets", symbol: "square.grid.2x2.fill", tint: Color(hex: 0x22C55E),
+        id: "widgets", name: "Widgets", symbol: "square.grid.2x2.fill", tint: Theme.yellow,
         tagline: "Live status items on the right of the menu bar — system, battery, calendar, network — each with its own panel",
         flow: "A status item → click to open its panel",
         enabled: bind(\.widgetsEnabled),
@@ -153,7 +153,7 @@ enum SettingsCatalog {
                          toggle: cap("widgets.network")),
         ]),
       ModuleSpec(
-        id: "menubar", name: "Menu Bar", symbol: "menubar.rectangle", tint: Color(hex: 0x6366F1),
+        id: "menubar", name: "Menu Bar", symbol: "menubar.rectangle", tint: Theme.orange,
         tagline: "Tuck away the menu-bar icons you rarely need, one click to bring them back",
         flow: "Sort apps into shown / hidden / always hidden → click the entry, ⌥B or hover the empty menu bar to reach them",
         hotkeys: ["⌥B"], enabled: bind(\.hiderEnabled),
@@ -231,6 +231,9 @@ enum SettingsCatalog {
       CapabilitySpec(key: "meetings", title: "Meetings",
                      detail: "A countdown in the ears from one minute before (click it to join); a card drops down with Join, which opens Zoom or Teams directly.",
                      toggle: cap("notch.meetings"), requirement: .calendar),
+      CapabilitySpec(key: "agents", title: "Agents waiting in tuios",
+                     detail: "When an agent in a tuios pane asks for approval, a plan review or an answer, stops with an error, or finishes its turn, a card drops down; click it to jump to the pane. Until you look, Home shows the first one in place of the quick actions.",
+                     toggle: cap("notch.agents")),
       CapabilitySpec(key: "volume", title: "Volume", detail: "Volume keys show a level bar in the notch, for speakers or AirPods.", toggle: cap("notch.volume")),
       CapabilitySpec(key: "power", title: "Battery", detail: "Shown for 2.5 s when the cable goes in or out; at 10% or less it stays until power is back.", toggle: cap("notch.power")),
       CapabilitySpec(key: "input", title: "Input source & Caps Lock", detail: "Switching input source or Caps Lock flashes the new state.", toggle: cap("notch.input")),
@@ -260,6 +263,9 @@ enum SettingsCatalog {
                          PillToggle(isOn: bind(\.claudeUsageConnected))
                        }
                      })),
+      CapabilitySpec(key: "markets", title: "Markets",
+                     detail: "A watchlist of crypto pairs, US and Hong Kong stocks, also shown on Home. Add or remove symbols in the tab; prices refresh every 15 s while the notch is open. Crypto comes from Binance through your proxy, stocks from Tencent's quote service.",
+                     toggle: cap("notch.markets"), value: "\(settings.marketWatchlist.count) symbols"),
     ]
   }
 }

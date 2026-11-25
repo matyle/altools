@@ -59,6 +59,8 @@ final class AppSettings: ObservableObject {
   @Published var notchSystemNowPlaying: Bool { didSet { save(notchSystemNowPlaying, "notchSystemNowPlaying") } }
   /// Trading pair the notch shows when idle, e.g. BTCUSDT or ETHUSDT.
   @Published var tickerSymbol: String { didSet { save(tickerSymbol, "tickerSymbol") } }
+  /// The Markets tab's watchlist, as "market:CODE" entries (crypto:BTCUSDT, us:AAPL, hk:00700).
+  @Published var marketWatchlist: [String] { didSet { save(marketWatchlist, "marketWatchlist") } }
   /// Empty means ~/Documents/Altools Notes.
   @Published var notesFolder: String { didSet { save(notesFolder, "notesFolder") } }
   /// Reminders list for new to-dos by name; empty or unmatched uses the default list.
@@ -101,6 +103,7 @@ final class AppSettings: ObservableObject {
     notchSystemNowPlaying = defaults.object(forKey: "notchSystemNowPlaying") as? Bool ?? true
     notesFolder = defaults.string(forKey: "notesFolder") ?? ""
     tickerSymbol = defaults.string(forKey: "tickerSymbol") ?? "BTCUSDT"
+    marketWatchlist = defaults.stringArray(forKey: "marketWatchlist") ?? MarketStore.defaultWatchlist
     todoList = defaults.string(forKey: "todoList") ?? ""
     claudeUsageConnected = defaults.object(forKey: "claudeUsageConnected") as? Bool ?? false
     selectionAutoPopup = defaults.object(forKey: "selectionAutoPopup") as? Bool ?? true
