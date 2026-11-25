@@ -833,8 +833,7 @@ private struct AboutPage: View {
   var body: some View {
     PageScaffold(title: "About", subtitle: "") {
       HStack(spacing: 18) {
-        Image(systemName: "square.grid.3x3.middle.filled").font(.system(size: 30, weight: .semibold))
-          .frame(width: 72, height: 72).background(Theme.iconFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        AltoolsAppIcon(size: 84)
         VStack(alignment: .leading, spacing: 6) {
           Text("Altools").font(.system(size: 22, weight: .bold))
           Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")")

@@ -335,7 +335,7 @@ private struct LauncherFooter: View {
   var body: some View {
     HStack(spacing: 14) {
       HStack(spacing: 6) {
-        Image(systemName: "square.grid.3x3.middle.filled").foregroundStyle(.secondary)
+        Image(nsImage: AltoolsGlyph.template(size: 13)).renderingMode(.template).foregroundStyle(.secondary)
         Text(leftLabel).foregroundStyle(.secondary)
       }
       .font(.system(size: 12))
