@@ -226,7 +226,7 @@ cat <<EOF
 EOF
 ```
 
-更多例子在 [`examples/plugins`](examples/plugins)：`hello`（行和视图）、`ticktick`（滴答清单 / TickTick：在刘海、启动器和划词里读取、添加任务，带 OAuth 登录）、
+更多例子在 [`examples/plugins`](examples/plugins)：`hello`（行和视图）、
 `site-monitor`（没有界面的常驻插件），以及 `text-tools`（划词、带快捷键的命令、启动器搜索）。内置的行情插件（[`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)）
 是视图的完整例子。
 

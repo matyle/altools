@@ -37,7 +37,7 @@ enum DebugPluginShareTest {
     print("PACKAGE exported=\(fm.fileExists(atPath: package.path)) reinstalled=\(fm.fileExists(atPath: hello.appendingPathComponent("run.sh").path)) enabled=\(host.plugins.first { $0.id == "hello" }?.enabled ?? false)")
 
     // 3. Install from GitHub (this branch).
-    PluginPackage.install(repo: "matyle/altools", path: "examples/plugins/ticktick", ref: ref)
+    PluginPackage.install(repo: "matyle/altools", path: "examples/plugins/text-tools", ref: ref)
 
     // 4. Store.
     let store = PluginStore()
@@ -46,10 +46,10 @@ enum DebugPluginShareTest {
     DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
       let markets = host.plugins.first { $0.id == "markets" }
       print("BUILTIN markets builtin=\(markets?.builtin ?? false) enabled=\(markets?.enabled ?? false) error=\(markets?.error ?? "-") ears=\(markets?.output?.ears?.text ?? "-") rows=\(markets?.output?.tab?.sections.flatMap(\.rows).map(\.title) ?? [])")
-      let tick = PluginHost.folder.appendingPathComponent("ticktick")
-      print("GITHUB installed=\(fm.fileExists(atPath: tick.appendingPathComponent("plugin.json").path)) enabled=\(host.plugins.first { $0.id == "ticktick" }?.enabled ?? false)")
+      let tools = PluginHost.folder.appendingPathComponent("text-tools")
+      print("GITHUB installed=\(fm.fileExists(atPath: tools.appendingPathComponent("plugin.json").path)) enabled=\(host.plugins.first { $0.id == "text-tools" }?.enabled ?? false)")
       print("STORE listings=\(store.listings.map { "\($0.manifest.name)\($0.featured ? "*" : "")" }) problem=\(store.problem ?? "-")")
-      for id in ["hello", "ticktick"] { host.setEnabled(id, false); try? fm.removeItem(at: PluginHost.folder.appendingPathComponent(id)) }
+      for id in ["hello", "text-tools"] { host.setEnabled(id, false); try? fm.removeItem(at: PluginHost.folder.appendingPathComponent(id)) }
       settings.homeCards = savedCards
       settings.disabledCapabilities = savedDisabled
       for key in ["pluginSettings", "migratedMarketsToPlugin", "pluginSeenAlerts", "enabledPlugins"] { defaults.removeObject(forKey: key) }

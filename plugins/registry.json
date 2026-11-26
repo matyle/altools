@@ -1,7 +1,6 @@
 {
   "version": 1,
   "plugins": [
-    { "repo": "matyle/altools", "path": "examples/plugins/ticktick" },
     { "repo": "matyle/altools", "path": "examples/plugins/hello" }
   ]
 }

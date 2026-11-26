@@ -239,8 +239,7 @@ cat <<EOF
 EOF
 ```
 
-More examples are in [`examples/plugins`](examples/plugins): `hello` (rows and a view), `ticktick` (TickTick /
-滴答清单: read and add tasks from the notch, launcher and selected text, with OAuth sign-in), `site-monitor` (a stream plugin with no UI) and `text-tools` (selected text, a
+More examples are in [`examples/plugins`](examples/plugins): `hello` (rows and a view), `site-monitor` (a stream plugin with no UI) and `text-tools` (selected text, a
 command with a hotkey, launcher search). The built-in Markets plugin
 ([`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)) is a full example of views.
 

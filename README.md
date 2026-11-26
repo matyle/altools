@@ -29,18 +29,16 @@ Add your own features with a folder holding `plugin.json` and a script in any la
 |---|---|
 | Notch | Short status beside the notch, a Home card, its own tab, alert cards |
 | Menu bar | Its own item, with a panel showing the plugin's page |
-| Launcher | Commands (each can have a global hotkey) and a search keyword, such as `tt` or `mk` |
+| Launcher | Commands (each can have a global hotkey) and a search keyword, such as `mk` or `b64` |
 | Selected text | Actions in the selection bar, whose result can replace the selection |
 
 - **Your own layout:** plugins describe their UI as a tree of stacks, grids, cards, text, symbols, badges, progress bars and sparklines, drawn natively like a widget. Or no UI at all: a plugin can stay running and pop a card only when something happens.
 - **Share:** export a plugin as an `.altoolsplugin` file, import one, or install from a GitHub folder. Settings › Plugins › **Plugin store** lists featured plugins and any repository tagged `altools-plugin`.
 - **Write one with AI:** describe what you want in Settings › Plugins and Claude Code writes it, reading the same guide.
 - **Built in:** Markets, with crypto, US and Hong Kong stocks added by name or code, sparklines, a launcher search (`mk 腾讯`) and an optional menu-bar ticker.
-- **Examples:** [TickTick / 滴答清单](examples/plugins/ticktick) (read today's tasks, add one with `tt buy milk tomorrow 3pm #Work !high` or from selected text, click to complete), [text tools](examples/plugins/text-tools), [site monitor](examples/plugins/site-monitor) and [more](examples/plugins).
+- **Examples:** [text tools](examples/plugins/text-tools), [site monitor](examples/plugins/site-monitor) and [more](examples/plugins).
 
-| | |
-|---|---|
-| ![Markets plugin](docs/screenshots/notch-markets.png) | ![TickTick plugin](docs/screenshots/notch-ticktick.png) |
+![Markets plugin](docs/screenshots/notch-markets.png)
 
 ### Launcher
 ⌥ Space opens one box for apps, commands, maths and clipboard history. Press ⇥ to ask AI through your local **Claude Code** or **Codex** CLI, with a chosen tool access level (none, read-only, edit files, full).

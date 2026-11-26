@@ -29,18 +29,16 @@
 |---|---|
 | 刘海 | 刘海旁的简短状态、主页卡片、自己的标签页、提醒卡片 |
 | 菜单栏 | 自己的图标，点开是插件页面 |
-| 启动器 | 命令（每个都能设全局快捷键）和搜索关键词，比如 `tt`、`mk` |
+| 启动器 | 命令（每个都能设全局快捷键）和搜索关键词，比如 `mk`、`b64` |
 | 划词 | 划词工具条里的操作，结果可以替换选中的文字 |
 
 - **界面自己排：** 插件用一棵由堆叠、网格、卡片、文字、图标、徽标、进度条和走势线组成的树描述界面，像小组件一样原生绘制。也可以完全没有界面：常驻运行，有事时才弹卡片。
 - **分享：** 导出成 `.altoolsplugin` 文件、导入，或者从 GitHub 文件夹安装。设置 › 插件 › **插件商店** 里列出精选插件和所有打了 `altools-plugin` 标签的仓库。
 - **让 AI 来写：** 在 设置 › 插件 里描述需求，Claude Code 照着同一份指南写好。
 - **内置：** 行情。加密货币、美股、港股按名称或代码添加，带走势线、启动器搜索（`mk 腾讯`）和可选的菜单栏行情。
-- **示例：** [滴答清单 / TickTick](examples/plugins/ticktick)（查看今天的任务，用 `tt 明天下午3点 开会 #工作 !高` 或划词添加，点一下完成）、[文本工具](examples/plugins/text-tools)、[网站监控](examples/plugins/site-monitor)，以及 [更多](examples/plugins)。
+- **示例：** [文本工具](examples/plugins/text-tools)、[网站监控](examples/plugins/site-monitor)，以及 [更多](examples/plugins)。
 
-| | |
-|---|---|
-| ![行情插件](docs/screenshots/notch-markets.png) | ![滴答清单插件](docs/screenshots/notch-ticktick.png) |
+![行情插件](docs/screenshots/notch-markets.png)
 
 ### 启动器
 ⌥ Space 打开一个输入框，搜应用、命令、算式和剪贴板历史。按 ⇥ 通过你本机的 **Claude Code** 或 **Codex** CLI 提问，可以选择工具权限（无、只读、可改文件、完全）。

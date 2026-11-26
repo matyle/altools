@@ -41,7 +41,6 @@
     pen: P('<path d="M4 20l4-1 11-11-3-3L5 16z"/>'),
     hand: P('<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10V4.5a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v7c0 4-2.5 7-6 7-2.5 0-4-1.3-5.5-3.5L3.5 13a1.5 1.5 0 0 1 2.5-1.6L8 14"/>'),
     question: P('<path d="M4 5h16v11H9l-5 4z"/><path d="M10 9a2 2 0 1 1 2.5 1.9c-.4.2-.5.5-.5.9V12M12 14.5v.1"/>'),
-    checksq: P('<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.2l2.8 2.8L16.2 9.4"/>'),
     puzzle: P('<path d="M9 4.5a2 2 0 1 1 4 0V6h4a1 1 0 0 1 1 1v4h-1.5a2 2 0 1 0 0 4H18v4a1 1 0 0 1-1 1h-4v-1.5a2 2 0 1 0-4 0V20H5a1 1 0 0 1-1-1v-4h1.5a2 2 0 1 0 0-4H4V7a1 1 0 0 1 1-1h4z"/>'),
     done: P('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'),
     island: P('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M9 5h6v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" fill="currentColor"/>'),
@@ -93,11 +92,6 @@
       termAllow: "Yes, run it", termDeny: "No", termAnswered: "Answered. The card is gone from the notch.",
       stOverview: "Overview", stModules: "Modules", stOverviewTag: "Every module can be switched off. Try it: the desktop changes with it.",
       liveTag: "live on this page",
-      selTickTick: "Add to TickTick",
-      ttToday: n => n ? `${n} for today` : "All clear today", ttOverdue: n => `${n} overdue`, ttSecOverdue: "Overdue", ttSecToday: "Today", ttSecTomorrow: "Tomorrow", ttSecLater: "Later",
-      ttHint: "Add one: <kbd>⌥ Space</kbd> tt buy milk tomorrow 3pm #Home !high", ttAdd: x => `Add “${x}”`, ttAdded: "Added", ttDone: x => `Done: ${x}`, ttComplete: "Complete",
-      ttInbox: "Inbox", ttHigh: "High", ttMed: "Medium", ttLow: "Low", ttTypeTask: "Type a task: tt call mom tomorrow 6pm", lnPlugins: "Plugins", ttLauncherRow: "Add a TickTick task", ttLauncherHint: "type tt …",
-      ttWhenToday: "Today", ttWhenTomorrow: "Tomorrow", ttWhenYesterday: "Yesterday",
     },
     zh: {
       menuFile: "文件", menuEdit: "编辑", menuView: "显示", menuWindow: "窗口", menuHelp: "帮助",
@@ -131,11 +125,6 @@
       termAllow: "可以，运行", termDeny: "不行", termAnswered: "已回答，刘海上的卡片随之消失。",
       stOverview: "总览", stModules: "模块", stOverviewTag: "每个模块都可以关掉。试试看：桌面会跟着变。",
       liveTag: "本页可体验",
-      selTickTick: "添加到滴答清单",
-      ttToday: n => n ? `今天 ${n} 项` : "今天没有待办", ttOverdue: n => `过期 ${n}`, ttSecOverdue: "已过期", ttSecToday: "今天", ttSecTomorrow: "明天", ttSecLater: "以后",
-      ttHint: "添加：<kbd>⌥ Space</kbd> tt 明天下午3点 开会 #工作 !高", ttAdd: x => `添加「${x}」`, ttAdded: "已添加", ttDone: x => `已完成：${x}`, ttComplete: "完成",
-      ttInbox: "收集箱", ttHigh: "高", ttMed: "中", ttLow: "低", ttTypeTask: "输入任务：tt 明天下午6点 给妈妈打电话", lnPlugins: "插件", ttLauncherRow: "添加滴答清单任务", ttLauncherHint: "输入 tt …",
-      ttWhenToday: "今天", ttWhenTomorrow: "明天", ttWhenYesterday: "昨天",
     },
   };
   let lang = store.get("altools-lang") || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en");
@@ -144,7 +133,7 @@
     document.documentElement.lang = lang;
     $$("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
     $("#lang-btn").textContent = lang === "zh" ? "中" : "EN";
-    renderMarkets(); renderTickTick(); renderSettings(); renderAgentStrip(); updateMeeting(); renderTerminal();
+    renderMarkets(); renderSettings(); renderAgentStrip(); updateMeeting(); renderTerminal();
     if (!$("#launcher").hidden) renderLauncher();
   }
 
@@ -160,7 +149,6 @@
     { id: "plugins", icon: "puzzle", color: "--cyan", name: { en: "Plugins", zh: "插件" }, tag: { en: "A folder with plugin.json and a script in any language. Plugins can use the notch, the menu bar, the launcher, hotkeys and selected text.", zh: "一个文件夹，放 plugin.json 和任意语言的脚本。插件可以用刘海、菜单栏、启动器、快捷键和划词。" },
       caps: [
         { id: "markets", live: true, en: ["Markets (built in)", "Crypto, US and HK stocks on Home and in their own tab."], zh: ["行情（内置）", "加密货币、美股、港股，显示在主页和行情页。"] },
-        { id: "ticktick", live: true, en: ["TickTick / 滴答清单", "Today's tasks in their own tab; add with tt in the launcher or from selected text."], zh: ["滴答清单 / TickTick", "今天的任务有自己的标签页；在启动器输入 tt 或划词添加。"] },
         { id: "texttools", en: ["Text tools", "Format JSON from selected text, ⌃⌥U for a UUID, b64 in the launcher."], zh: ["文本工具", "划词格式化 JSON，⌃⌥U 生成 UUID，启动器里 b64 编解码。"] },
       ] },
     { id: "launcher", icon: "search", color: "--purple", name: { en: "Launcher", zh: "启动器" }, tag: { en: "One box for apps, commands, maths, clipboard and AI.", zh: "一个输入框：应用、命令、算式、剪贴板和 AI。" },
@@ -281,102 +269,6 @@
     if (!show && $("#tab-markets").classList.contains("on")) showTab("home");
   }
 
-  // ---------- TickTick plugin ----------
-  const TASKS = [
-    { title: { en: "Renew the passport photos", zh: "重拍护照照片" }, list: { en: "Personal", zh: "个人" }, day: -1, prio: 5 },
-    { title: { en: "Send the Q3 invoice", zh: "发出第三季度发票" }, list: { en: "Work", zh: "工作" }, day: 0, time: "15:00", prio: 3 },
-    { title: { en: "Reply to Lena's doc", zh: "回复 Lena 的文档" }, list: { en: "Work", zh: "工作" }, day: 0, time: "17:30", prio: 0 },
-    { title: { en: "Book the dentist", zh: "预约牙医" }, list: { en: "Personal", zh: "个人" }, day: 1, prio: 0 },
-    { title: { en: "Plan the offsite", zh: "规划团建" }, list: { en: "Work", zh: "工作" }, day: 4, prio: 1 },
-  ];
-  const ttLabel = x => typeof x === "string" ? x : x[lang];
-  const ttWhen = x => {
-    const d = x.day === 0 ? t("ttWhenToday") : x.day === 1 ? t("ttWhenTomorrow") : x.day === -1 ? t("ttWhenYesterday") : `+${x.day}d`;
-    return x.time ? (x.day === 0 ? x.time : `${d} ${x.time}`) : d;
-  };
-  const PRIO_COLOR = { 5: "var(--red)", 3: "var(--yellow)", 1: "var(--blue)" };
-  function renderTickTick() {
-    const show = on("ticktick", "plugins");
-    $("#tab-ticktick").style.display = show ? "" : "none";
-    if (!show && $("#tab-ticktick").classList.contains("on")) showTab("home");
-    const open = TASKS.filter(x => !x.done);
-    const over = open.filter(x => x.day < 0), today = open.filter(x => x.day === 0);
-    const groups = [["ttSecOverdue", TASKS.filter(x => x.day < 0), "red"], ["ttSecToday", TASKS.filter(x => x.day === 0), ""],
-                    ["ttSecTomorrow", TASKS.filter(x => x.day === 1), ""], ["ttSecLater", TASKS.filter(x => x.day > 1), ""]];
-    let html = `<div class="tt-head"><b>${t("ttToday", over.length + today.length)}</b>${over.length ? `<span class="pill-red">${t("ttOverdue", over.length)}</span>` : ""}</div>`;
-    for (const [key, list, cls] of groups) {
-      if (!list.length) continue;
-      html += `<div class="tt-sec ${cls}">${t(key)}<i>${list.filter(x => !x.done).length}</i></div>`;
-      for (const x of list) {
-        const i = TASKS.indexOf(x);
-        html += `<div class="tt-row ${x.day < 0 ? "over" : ""} ${x.done ? "done" : ""} ${x.fresh ? "fresh" : ""}"><span class="ck" data-tt="${i}" style="color:${PRIO_COLOR[x.prio] || "rgba(255,255,255,.4)"}" title="${t("ttComplete")}"></span><span class="ti">${ttLabel(x.title)}</span><span class="ls">${ttLabel(x.list)}</span><span class="du">${ttWhen(x)}</span></div>`;
-      }
-    }
-    html += `<div class="tt-hint">${t("ttHint")}</div>`;
-    $("#tt-list").innerHTML = html;
-    $$("[data-tt]").forEach(el => el.addEventListener("click", e => { e.stopPropagation(); completeTask(+el.dataset.tt); }));
-  }
-  function completeTask(i) {
-    const x = TASKS[i];
-    if (!x || x.done) return;
-    x.done = true; renderTickTick();
-    toast(t("ttDone", ttLabel(x.title)));
-    setTimeout(() => { const j = TASKS.indexOf(x); if (j >= 0) TASKS.splice(j, 1); renderTickTick(); }, 1400);
-  }
-  // A small version of the plugin's quick add: day, time, #list and !priority come out of the text.
-  const WEEK = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, "日": 0, "天": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6 };
-  function parseTask(text) {
-    let s = " " + text.trim() + " ", day = null, time = null, list = null, prio = 0;
-    const take = (re, fn) => { const m = s.match(re); if (m) { s = s.replace(m[0], " \u0001 "); fn(m); } };
-    take(/\s!(\S+)/, m => { prio = { high: 5, h: 5, "1": 5, "高": 5, med: 3, m: 3, "2": 3, "中": 3, low: 1, l: 1, "3": 1, "低": 1 }[m[1].toLowerCase()] || 0; });
-    take(/\s#(\S+)/, m => { list = m[1]; });
-    take(/\s(\d{1,2})(?::(\d\d))?\s*(am|pm)(?=[\s,.，。])/i, m => { time = [(+m[1] % 12) + (m[3].toLowerCase() === "pm" ? 12 : 0), +(m[2] || 0)]; });
-    if (!time) take(/(上午|早上|中午|下午|晚上)?\s*(\d{1,2})\s*[点:：]\s*(半|\d\d)?/, m => {
-      let h = +m[2]; const min = m[3] === "半" ? 30 : +(m[3] || 0);
-      if ((m[1] === "下午" || m[1] === "晚上") && h < 12) h += 12;
-      if (!m[1] && h >= 1 && h <= 7) h += 12;
-      time = [h, min];
-    });
-    take(/今天|\stoday\s/i, () => { day = 0; });
-    if (day === null) take(/明天|\stomorrow\s|\stmr\s/i, () => { day = 1; });
-    if (day === null) take(/后天/, () => { day = 2; });
-    if (day === null) take(/(?:周|星期)([一二三四五六日天])|\s(sun|mon|tue|wed|thu|fri|sat)[a-z]*(?=[\s,.，。])/i, m => { day = (WEEK[m[1] || m[2].toLowerCase()] - new Date().getDay() + 7) % 7; });
-    const hm = time ? `${String(time[0]).padStart(2, "0")}:${String(time[1]).padStart(2, "0")}` : null;
-    if (hm && day === null) { const n = new Date(); day = time[0] * 60 + time[1] < n.getHours() * 60 + n.getMinutes() ? 1 : 0; }
-    return { title: cleanTitle(s), day, time: hm, list, prio };
-  }
-  // Drops the gaps left by what was taken out, with an "at" / "on" / "by" that led into them.
-  const cleanTitle = s => s.replace(/\s(?:at|on|by)\s+\u0001/gi, " ").replace(/\u0001/g, " ").replace(/\s+/g, " ")
-    .replace(/\s+([,，。.])/g, "$1").replace(/^[\s,，。.]+|[\s,，。.]+$/g, "");
-  function describeTask(p) {
-    const parts = [];
-    if (p.day !== null) parts.push(ttWhen({ day: p.day, time: p.time }).replace(/^(\d\d:\d\d)$/, `${t("ttWhenToday")} $1`));
-    parts.push(p.list ? p.list : t("ttInbox"));
-    if (p.prio) parts.push(t(p.prio === 5 ? "ttHigh" : p.prio === 3 ? "ttMed" : "ttLow"));
-    return parts.join(" · ");
-  }
-  function addTask(text, keepTitle = false) {
-    const p = parseTask(text);
-    if (keepTitle) p.title = text.trim();
-    if (!p.title) return;
-    TASKS.forEach(x => { x.fresh = false; });
-    TASKS.push({ title: p.title, list: p.list || t("ttInbox"), day: p.day === null ? 0 : p.day, time: p.time, prio: p.prio, fresh: true });
-    TASKS.sort((a, b) => a.day - b.day || String(a.time || "99").localeCompare(String(b.time || "99")));
-    renderTickTick();
-    pluginCard(t("ttAdded"), `${p.title} · ${describeTask(p)}`);
-  }
-  // Plugin alert cards drop from the notch like agent cards; clicking opens the plugin's tab.
-  function pluginCard(kind, text) {
-    if (!state.modules.notch || notch.classList.contains("expanded")) return toast(`${kind}: ${text}`);
-    const card = $("#agent-card");
-    const color = "#4772fa";
-    card.innerHTML = `<span class="ic" style="background:color-mix(in srgb, ${color} 26%, transparent);color:#8aa7ff" data-icon="checksq"></span>
-      <span class="tx"><span class="row"><b>TickTick</b><span class="k" style="color:var(--green)">${kind}</span></span><span class="s">${text.replace(/</g, "&lt;")}</span></span>`;
-    paintIcons(card); card.hidden = false; card.dataset.plugin = "ticktick";
-    notch.classList.add("with-card");
-    clearTimeout(cardTimer); cardTimer = setTimeout(() => hideCard(), 5000);
-  }
-
   // ---------- Agent alerts ----------
   const AGENTS = [
     { kind: "approval", name: "api-server refactor", color: "--orange", icon: "hand",
@@ -402,7 +294,6 @@
     if (!waiting.includes(a)) waiting.push(a);
     shownAgent = a;
     const card = $("#agent-card");
-    delete card.dataset.plugin;
     card.innerHTML = agentCardHTML(a); paintIcons(card); card.hidden = false;
     notch.classList.add("with-card");
     renderAgentStrip();
@@ -413,12 +304,7 @@
     notch.classList.remove("with-card");
     setTimeout(() => { if (!notch.classList.contains("with-card")) $("#agent-card").hidden = true; }, instant ? 0 : 300);
   }
-  $("#agent-card").addEventListener("click", e => {
-    e.stopPropagation();
-    if ($("#agent-card").dataset.plugin) { hideCard(true); expand(); showTab("ticktick"); return; }
-    if (shownAgent) openAgent(shownAgent);
-    hideCard();
-  });
+  $("#agent-card").addEventListener("click", e => { e.stopPropagation(); if (shownAgent) openAgent(shownAgent); hideCard(); });
   function renderAgentStrip() {
     const strip = $("#agent-strip");
     const a = waiting[0];
@@ -505,7 +391,7 @@
     $("#hide-dot").style.display = hider ? "" : "none";
     if (!hider) { $("#hidden-icons").classList.remove("tucked"); } else if (!revealed) { $("#hidden-icons").classList.add("tucked"); }
     if (!on("agents", "notch")) hideCard(true);
-    renderMarkets(); renderTickTick(); renderAgentStrip(); renderSettings();
+    renderMarkets(); renderAgentStrip(); renderSettings();
   }
 
   // ---------- Launcher ----------
@@ -560,15 +446,6 @@
       if (aiShown) html = aiShown;
     } else if (lnMode === "clip") {
       CLIPS.filter(c => !q || c.v.toLowerCase().includes(q.toLowerCase())).forEach(c => { lnItems.push({ run: () => { closeLauncher(); toast(`${t("pasted")}: ${c.v.slice(0, 28)}`); } }); html += item({ n: c.v, i: c.i, c: "t-dark-bg" }, c.ago); });
-    } else if (/^tt(\s|$)/i.test(q) && on("ticktick", "plugins")) {
-      const text = q.slice(2).trim(), p = parseTask(text);
-      html += `<div class="ln-sec">TickTick</div>`;
-      if (p.title) { lnItems.push({ run: () => { closeLauncher(); addTask(text); } }); html += item({ n: t("ttAdd", p.title.replace(/</g, "&lt;")), i: "checksq", c: "t-blue-bg" }, describeTask(p)); }
-      else { lnItems.push({ run: () => {} }); html += item({ n: t("ttTypeTask"), i: "checksq", c: "t-blue-bg" }); }
-      TASKS.filter(x => !x.done && (!p.title || ttLabel(x.title).toLowerCase().includes(p.title.toLowerCase()))).slice(0, 5).forEach(x => {
-        lnItems.push({ run: () => { closeLauncher(); completeTask(TASKS.indexOf(x)); } });
-        html += item({ n: ttLabel(x.title), i: "done", c: "t-dark-bg" }, `${t("ttComplete")} · ${ttWhen(x)}`);
-      });
     } else {
       const m = mathResult(q);
       if (m !== null) { lnItems.push({ run: () => { closeLauncher(); toast(`${t("copied")} ${m}`); } }); html += `<button class="ln-item ln-calc" data-k="0"><span style="color:var(--dim)">${q} =</span><b>${m}</b></button>`; }
@@ -577,7 +454,6 @@
       if (!q) { html += `<div class="ln-sec">${t("lnClipboard")}</div>`; CLIPS.slice(0, 2).forEach(c => { lnItems.push({ run: () => { closeLauncher(); toast(`${t("pasted")}: ${c.v.slice(0, 28)}`); } }); html += item({ n: c.v, i: c.i }, c.ago); }); }
       if (apps.length) { html += `<div class="ln-sec">${t("lnApps")}</div>`; apps.forEach(a => { lnItems.push({ run: () => { closeLauncher(); if (a.open) openWindow(a.open); else toast(`${a.n}`); } }); html += item(a); }); }
       if (cmds.length) { html += `<div class="ln-sec">${t("lnCommands")}</div>`; cmds.forEach(c => { lnItems.push({ run: c.run }); html += item(c); }); }
-      if (!q && on("ticktick", "plugins")) { html += `<div class="ln-sec">${t("lnPlugins")}</div>`; lnItems.push({ run: () => { input.value = "tt "; renderLauncher(); input.focus(); } }); html += item({ n: t("ttLauncherRow"), i: "checksq", c: "t-blue-bg" }, t("ttLauncherHint")); }
       if (q && m === null) { lnItems.push({ run: () => askAI(q) }); html += item({ n: t("lnAskAI", q), i: "spark", c: "t-purple-bg" }, "⇥"); }
     }
     list.innerHTML = html; paintIcons(list);
@@ -644,11 +520,6 @@
     const act = b.dataset.sel; hideSel();
     if (!selInfo) return;
     if (act === "copy") return toast(t("copied"));
-    if (act === "ticktick") {
-      if (!on("ticktick", "plugins")) return toast(t("off", modName("plugins")));
-      getSelection().removeAllRanges();
-      return addTask(selInfo.text.split(/[。.!?]/)[0].slice(0, 80), true);
-    }
     const i = Math.max(0, selInfo.index);
     const out = act === "translate" ? TRANSLATIONS[lang][i] : act === "explain" ? EXPLAIN[lang][i] : REWRITE[lang][i];
     const box = $("#selresult");
