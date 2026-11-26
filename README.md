@@ -12,6 +12,7 @@ A native macOS menu-bar toolkit: a launcher with clipboard history and AI, actio
 Hover the notch (or press ⌥N) for a panel with now playing, your next meeting and to-dos, a market watchlist and quick actions. While it is closed, the "ears" beside the notch show what is happening now: playback, a meeting countdown, volume, charging, camera and microphone use, finished downloads.
 
 - **Tabs:** Home, Media, To-do (Reminders), Notes (Markdown files), Shelf (drop files), AI usage, Markets.
+- **Meeting reminders:** a minute before a calendar meeting, a card drops with a countdown and a **Join** button that opens Zoom, Teams or Tencent Meeting in its app (Google Meet in the browser); the ears count down until it starts.
 - **Agent alerts:** when an agent in a [tuios](https://tuios.dev/) pane needs approval, has a question, errors or finishes, a card drops from the notch; click it to jump to that pane.
 - **Markets:** crypto pairs, US and Hong Kong stocks; add them by name or code.
 - **AI usage:** Claude Code's 5-hour and weekly plan quotas, and tokens used today.
@@ -20,7 +21,7 @@ Hover the notch (or press ⌥N) for a panel with now playing, your next meeting 
 | | |
 |---|---|
 | ![Markets](docs/screenshots/notch-markets.png) | ![AI usage](docs/screenshots/notch-ai-usage.png) |
-| ![Agent card](docs/screenshots/notch-agent-card.png) | |
+| ![Meeting reminder](docs/screenshots/notch-meeting-card.png) | ![Agent card](docs/screenshots/notch-agent-card.png) |
 
 ### Launcher
 ⌥ Space opens one box for apps, commands, maths and clipboard history. Press ⇥ to ask AI through your local **Claude Code** or **Codex** CLI, with a chosen tool access level (none, read-only, edit files, full).

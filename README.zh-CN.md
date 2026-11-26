@@ -12,6 +12,7 @@
 鼠标停在刘海上（或按 ⌥N）会展开一个面板：正在播放、下一个会议和待办、行情自选、快捷操作。收起时，刘海两侧的"耳朵"显示当下正在发生的事：播放、会议倒计时、音量、充电、摄像头和麦克风占用、下载完成。
 
 - **标签页：** 主页、媒体、待办（提醒事项）、笔记（Markdown 文件）、暂存架（拖入文件）、AI 用量、行情。
+- **会议提醒：** 日历里的会议开始前一分钟，刘海弹出卡片，带倒计时和 **加入** 按钮，直接用 App 打开 Zoom、Teams 或腾讯会议（Google Meet 用浏览器打开）；开始前两侧耳朵一直倒计时。
 - **Agent 提醒：** [tuios](https://tuios.dev/) 里的 agent 需要你批准、有问题要问、出错或完成一轮时，刘海会弹出卡片；点一下直接跳到那个面板。
 - **行情：** 加密货币、美股、港股，可以按名称或代码添加。
 - **AI 用量：** Claude Code 套餐的 5 小时和每周额度，以及今天用掉的 token。
@@ -20,7 +21,7 @@
 | | |
 |---|---|
 | ![行情](docs/screenshots/notch-markets.png) | ![AI 用量](docs/screenshots/notch-ai-usage.png) |
-| ![Agent 卡片](docs/screenshots/notch-agent-card.png) | |
+| ![会议提醒](docs/screenshots/notch-meeting-card.png) | ![Agent 卡片](docs/screenshots/notch-agent-card.png) |
 
 ### 启动器
 ⌥ Space 打开一个输入框，搜应用、命令、算式和剪贴板历史。按 ⇥ 通过你本机的 **Claude Code** 或 **Codex** CLI 提问，可以选择工具权限（无、只读、可改文件、完全）。
