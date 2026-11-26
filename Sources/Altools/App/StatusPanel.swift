@@ -66,11 +66,7 @@ struct StatusPanelView: View {
 
   private func header(running: Int, total: Int) -> some View {
     HStack(spacing: 10) {
-      Image(systemName: "square.grid.3x3.middle.filled")
-        .font(.system(size: 14, weight: .semibold))
-        .frame(width: 30, height: 30)
-        .background(LinearGradient(colors: [Color(hex: 0x6366F1), Color(hex: 0x2DD4BF)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+      AltoolsAppIcon(size: 36)
       Text("Altools").font(.system(size: 16, weight: .bold))
       Spacer()
       Circle().fill(running > 0 ? Color.green : .gray).frame(width: 7, height: 7)

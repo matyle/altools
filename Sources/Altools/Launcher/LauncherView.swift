@@ -110,11 +110,12 @@ private struct ResultList: View {
             }
             LauncherRow(item: item, selected: index == model.selection, compact: model.mode == .clipboard)
               .id(item.id)
-              .onTapGesture(count: 2) {
+              // One handler that reads the click count: pairing a count-2 tap with a count-1 tap
+              // makes SwiftUI hold every single click for the double-click interval (~0.3–0.5 s).
+              .onTapGesture {
                 model.selection = index
-                model.submit()
+                if (NSApp.currentEvent?.clickCount ?? 1) >= 2 { model.submit() }
               }
-              .onTapGesture { model.selection = index }
           }
         }
         .padding(8)
@@ -334,7 +335,7 @@ private struct LauncherFooter: View {
   var body: some View {
     HStack(spacing: 14) {
       HStack(spacing: 6) {
-        Image(systemName: "square.grid.3x3.middle.filled").foregroundStyle(.secondary)
+        Image(nsImage: AltoolsGlyph.template(size: 13)).renderingMode(.template).foregroundStyle(.secondary)
         Text(leftLabel).foregroundStyle(.secondary)
       }
       .font(.system(size: 12))

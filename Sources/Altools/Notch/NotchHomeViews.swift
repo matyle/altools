@@ -6,27 +6,52 @@ struct HomeTab: View {
   @ObservedObject var reminders: RemindersStore
   let actions: NotchActions
 
+  @ObservedObject private var settings = AppSettings.shared
+
   var body: some View {
     VStack(spacing: 6) {
       HStack(spacing: 6) {
-        NotchCard(padding: 9) { mediaCard }
-          .onTapGesture { withAnimation(.snappy) { model.tab = .media } }
-          .frame(width: 206)
-        NotchCard(padding: 9) { agenda }
-        if AppSettings.shared.isOn("notch.markets") {
-          NotchCard(padding: 9) { MarketsSummary(markets: model.markets) }
-            .frame(width: 128)
+        let cards = visibleCards
+        // Without a flexible card (Calendar & to-dos), the fixed ones share the width.
+        let stretch = !cards.contains { $0.width == nil }
+        ForEach(cards) { card in
+          NotchCard(padding: 9) { content(for: card) }
+            .frame(width: stretch ? nil : card.width)
+            .frame(maxWidth: stretch || card.width == nil ? .infinity : nil)
             .contentShape(Rectangle())
-            .onTapGesture { withAnimation(.snappy) { model.tab = .markets } }
+            .onTapGesture { open(card) }
         }
       }
       // An agent waiting in tuios outranks the shortcuts; they come back once it's answered.
       if AppSettings.shared.isOn("notch.agents"), !model.agents.items.isEmpty {
         AgentStrip(agents: model.agents)
-      } else {
+      } else if !settings.homeActionList.isEmpty {
         quickActions
       }
     }
+  }
+
+  private var visibleCards: [HomeCard] {
+    settings.homeCardList.filter { card in card.capability.map(settings.isOn) ?? true }
+  }
+
+  @ViewBuilder private func content(for card: HomeCard) -> some View {
+    switch card {
+    case .media: mediaCard
+    case .agenda: agenda
+    case .markets: MarketsSummary(markets: model.markets)
+    case .usage: UsageSummary(usage: model.usage)
+    }
+  }
+
+  private func open(_ card: HomeCard) {
+    let tab: NotchModel.Tab? = switch card {
+    case .media: .media
+    case .markets: .markets
+    case .usage: .usage
+    case .agenda: nil
+    }
+    if let tab { withAnimation(.snappy) { model.tab = tab } }
   }
 
   // MARK: Media
@@ -109,16 +134,12 @@ struct HomeTab: View {
 
   private var quickActions: some View {
     HStack(spacing: 6) {
-      QuickAction(symbol: "camera.viewfinder", title: "Capture", tint: .blue, action: actions.captureArea)
-      QuickAction(symbol: "text.viewfinder", title: "OCR", tint: .cyan, action: actions.recognizeText)
-      QuickAction(symbol: "eyedropper", title: "Color", tint: .pink, action: actions.pickColor)
-      QuickAction(symbol: "doc.on.clipboard.fill", title: "Clips", tint: .teal, action: actions.openClipboard)
-      QuickAction(symbol: "character.bubble.fill", title: "Translate", tint: .indigo) {
-        actions.translate(NSPasteboard.general.string(forType: .string) ?? "")
+      ForEach(settings.homeActionList) { action in
+        QuickAction(symbol: action.symbol, title: action.title, tint: action.tint) { action.perform(actions) }
       }
-      QuickAction(symbol: "sparkles", title: "Ask AI", tint: .purple, action: actions.askAI)
     }
   }
+
 }
 
 struct MeetingRow: View {
@@ -175,6 +196,35 @@ struct PermissionChip: View {
         .background(Color.white.opacity(0.1), in: Capsule())
     }
     .buttonStyle(.plain)
+  }
+}
+
+/// Claude Code's plan quotas in two bars, for Home.
+private struct UsageSummary: View {
+  @ObservedObject var usage: AIUsage
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(spacing: 5) {
+        Circle().fill(Color(red: 0.85, green: 0.47, blue: 0.34)).frame(width: 6, height: 6)
+        Text("Claude Code").font(.system(size: 11, weight: .semibold)).lineLimit(1)
+      }
+      if usage.claude.windows.isEmpty {
+        Text("Connect in Settings › Notch").font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+      }
+      ForEach(usage.claude.windows.prefix(2)) { window in
+        VStack(alignment: .leading, spacing: 3) {
+          HStack {
+            Text(window.name).font(.system(size: 10)).foregroundStyle(.white.opacity(0.6))
+            Spacer()
+            Text("\(Int(window.percent.rounded()))%").font(.system(size: 11, weight: .semibold).monospacedDigit())
+          }
+          ProgressBar(value: window.percent / 100)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .onAppear { usage.refresh() }
   }
 }
 

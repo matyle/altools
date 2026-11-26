@@ -100,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     statusItem.autosaveName = "altools.main"
-    statusItem.button?.image = NSImage(systemSymbolName: "square.grid.3x3.middle.filled", accessibilityDescription: "Altools")
+    statusItem.button?.image = AltoolsGlyph.template()
     let actions = StatusActions(
       screenshot: { [weak self] in self?.capture.capture(then: .annotate) },
       ocr: { [weak self] in self?.capture.capture(then: .ocr) },

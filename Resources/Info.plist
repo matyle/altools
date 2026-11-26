@@ -8,6 +8,8 @@
 	<string>Altools</string>
 	<key>CFBundleExecutable</key>
 	<string>Altools</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.altools.menubar</string>
 	<key>CFBundleName</key>

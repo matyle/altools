@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Builds Altools.app into ./build. Usage: scripts/build-app.sh [debug|release] [install]
+# Builds Altools.app into ./build. Usage: scripts/build-app.sh [debug|release] [install|dmg]
 # "install" also copies it to /Applications, the copy to run: macOS 27 refuses menu bar
-# items from the ./build location.
+# items from the ./build location. "dmg" also makes build/Altools.dmg, a disk image with
+# the app beside an Applications shortcut to drag it onto.
 set -euo pipefail
 
 config="${1:-release}"
@@ -16,6 +17,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/Altools"
 cp "$root/Resources/Info.plist" "$app/Contents/Info.plist"
+cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 
 # System Now Playing bridge, loaded into /usr/bin/perl at runtime (see NowPlaying.swift).
 mkdir -p "$app/Contents/Frameworks"
@@ -39,4 +41,22 @@ if [[ "${2:-}" == "install" ]]; then
   rm -rf /Applications/Altools.app
   cp -R "$app" /Applications/Altools.app
   echo "Installed /Applications/Altools.app"
+fi
+
+if [[ "${2:-}" == "dmg" ]]; then
+  rm -f "$root/build/Altools.dmg"
+  if command -v dmgbuild >/dev/null 2>&1; then
+    # Window layout and background need dmgbuild (pip install dmgbuild); it works without Finder.
+    dmgbuild -s "$root/scripts/dmg-settings.py" -D app="$app" -D background="$root/Resources/dmg-background.png" \
+      "Altools" "$root/build/Altools.dmg"
+  else
+    staging="$root/build/dmg"
+    rm -rf "$staging"
+    mkdir -p "$staging"
+    cp -R "$app" "$staging/"
+    ln -s /Applications "$staging/Applications"
+    hdiutil create -quiet -volname "Altools" -srcfolder "$staging" -fs HFS+ -format UDZO -ov "$root/build/Altools.dmg"
+    rm -rf "$staging"
+  fi
+  echo "Built $root/build/Altools.dmg"
 fi

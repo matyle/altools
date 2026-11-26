@@ -66,8 +66,8 @@ Every module and capability can be switched on or off, and searched.
 
 ## Install
 
-1. Download `Altools.zip` from the latest [Release](../../releases/latest); every push to `main` publishes one.
-2. Unzip it into **/Applications** and open it. Builds are not notarised, so the first time right-click the app and choose **Open**.
+1. Download `Altools.dmg` from the latest [Release](../../releases/latest); every push to `main` publishes one.
+2. Open it and drag **Altools** onto **Applications**, then open Altools from Applications. Builds are not notarised: if macOS says it can't check the app, open **System Settings › Privacy & Security** and click **Open Anyway**.
 3. Grant what you use when asked: **Accessibility** (selected text, paste-back, hotkeys, listing menu-bar icons), **Screen Recording** (capture), Calendar and Reminders (notch), Automation (Music and Spotify).
 
 Run it from /Applications: macOS 27 refuses menu-bar items from apps running elsewhere, such as a build folder.
@@ -79,6 +79,7 @@ Requires macOS 14 or later. Hiding menu-bar icons needs macOS 27; it uses a priv
 ```sh
 scripts/build-app.sh                  # build/Altools.app (release)
 scripts/build-app.sh release install  # also copies it to /Applications
+scripts/build-app.sh release dmg      # also makes build/Altools.dmg
 swift test                            # core logic tests
 ```
 

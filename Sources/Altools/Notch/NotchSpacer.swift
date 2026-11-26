@@ -26,16 +26,13 @@ final class NotchSpacer {
     guard item == nil else { return }
     let item = NSStatusBar.system.statusItem(withLength: Self.minimum)
     item.autosaveName = "altools.notch.spacer"
-    item.button?.toolTip = "Notch spacer: ⌘-drag this to just left of the first icon past the island"
-    item.button?.image = NSImage(systemSymbolName: "rectangle.topthird.inset.filled", accessibilityDescription: "Notch spacer")?
-      .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))
-    item.button?.appearsDisabled = true
+    item.button?.setAccessibilityLabel("Notch spacer")
     self.item = item
     timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.fit() }
     let flags: (NSEvent) -> Void = { [weak self] event in
       // Only highlight it; changing its width mid-drag would move icons out from under the pointer.
       self?.commandHeld = event.modifierFlags.contains(.command)
-      self?.item?.button?.appearsDisabled = self?.commandHeld != true
+      self?.showHandle(self?.commandHeld == true)
       if self?.commandHeld == true { self?.watchCommandRelease() }
     }
     if let global = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: flags) { monitors.append(global) }
@@ -51,9 +48,18 @@ final class NotchSpacer {
         self.watchCommandRelease()
       } else {
         self.commandHeld = false
-        self.item?.button?.appearsDisabled = true
+        self.showHandle(false)
       }
     }
+  }
+
+  /// The spacer is blank space; its handle shows only while ⌘ is held, when it can be dragged.
+  private func showHandle(_ visible: Bool) {
+    item?.button?.toolTip = visible ? "Notch spacer: ⌘-drag this to just left of the first icon past the island" : nil
+    item?.button?.image = visible
+      ? NSImage(systemSymbolName: "arrow.left.and.right", accessibilityDescription: "Notch spacer")?
+        .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))
+      : nil
   }
 
   func stop() {
