@@ -247,12 +247,6 @@ enum SettingsCatalog {
       CapabilitySpec(key: "input", title: "Input source & Caps Lock", detail: "Switching input source or Caps Lock flashes the new state.", toggle: cap("notch.input")),
       CapabilitySpec(key: "sensors", title: "Camera & microphone", detail: "Green while an app has the camera, orange with the app name while one records audio.", toggle: cap("notch.sensors")),
       CapabilitySpec(key: "downloads", title: "Finished downloads", detail: "When a download or AirDrop lands in Downloads, the notch shows the file.", toggle: cap("notch.downloads")),
-      CapabilitySpec(key: "ticker", title: "Crypto price",
-                     detail: "When nothing else is live, the ears show a live price and its 24h change, streamed from Binance's public market data through your proxy.",
-                     toggle: cap("notch.ticker"), value: settings.tickerSymbol,
-                     settings: AnyView(SettingsCard { SettingsRow("Trading pair", note: "Any Binance spot pair, e.g. BTCUSDT, ETHUSDT, SOLUSDT.") {
-                       SettingsTextField(text: Binding(get: { settings.tickerSymbol }, set: { settings.tickerSymbol = $0 }), prompt: "BTCUSDT")
-                     } })),
       CapabilitySpec(key: "receipts", title: "Receipts", detail: "Screenshots, picked colours and recognized text report in the notch instead of a toast.", toggle: cap("notch.receipts")),
       CapabilitySpec(key: "todo", title: "To-do", detail: "Your Reminders: overdue, today and the next 7 days; the input understands “tomorrow 3pm”.",
                      toggle: cap("notch.todo"), requirement: .reminders,
@@ -271,9 +265,6 @@ enum SettingsCatalog {
                          PillToggle(isOn: bind(\.claudeUsageConnected))
                        }
                      })),
-      CapabilitySpec(key: "markets", title: "Markets",
-                     detail: "A watchlist of crypto pairs, US and Hong Kong stocks, also shown on Home. Add or remove symbols in the tab; prices refresh every 15 s while the notch is open. Crypto comes from Binance through your proxy, stocks from Tencent's quote service.",
-                     toggle: cap("notch.markets"), value: "\(settings.marketWatchlist.count) symbols"),
     ]
   }
 }

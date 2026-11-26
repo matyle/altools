@@ -84,7 +84,6 @@ struct NotchView: View {
     case .sensors: "sensors"
     case .ai: "ai"
     case .music: "music"
-    case .ticker: "ticker"
     case .plugin(let id, _): "plugin-\(id)"
     }
   }
@@ -160,13 +159,6 @@ private struct Ears: View {
     case .plugin(let id, let ears):
       Image(systemName: ears.symbol ?? PluginHost.shared.plugins.first { $0.id == id }?.manifest?.icon ?? "puzzlepiece.extension.fill")
         .foregroundStyle(Color(pluginHex: ears.tint ?? PluginHost.shared.plugins.first { $0.id == id }?.manifest?.tint) ?? .orange)
-    case .ticker(let quote):
-      // Bitcoin gets its symbol alone; other pairs show their short name.
-      if CryptoTicker.base(of: quote.symbol) == "BTC" {
-        Image(systemName: "bitcoinsign.circle.fill").foregroundStyle(.orange)
-      } else {
-        Text(CryptoTicker.base(of: quote.symbol)).foregroundStyle(.orange)
-      }
     case .music:
       Group {
         if let art = model.nowPlaying.artwork {
@@ -215,16 +207,6 @@ private struct Ears: View {
       ProgressView().controlSize(.mini).tint(.white)
     case .plugin(_, let ears):
       Text(ears.text).foregroundStyle(Color(pluginHex: ears.tint) ?? .white).monospacedDigit()
-    case .ticker(let quote):
-      VStack(alignment: .trailing, spacing: -1) {
-        Text(CryptoTicker.format(quote.price))
-          .monospacedDigit()
-          .contentTransition(.numericText(value: quote.price))
-          .animation(.snappy, value: quote.price)
-        Text(String(format: "%@%.2f%%", quote.change >= 0 ? "+" : "", quote.change))
-          .font(.system(size: 8, weight: .semibold).monospacedDigit())
-          .foregroundStyle(quote.change >= 0 ? Color.green : Color.red)
-      }
     case .music:
       Image(systemName: "waveform")
         .foregroundStyle(.orange)
@@ -276,7 +258,6 @@ private struct ExpandedNotch: View {
         case .notes: NotesTab(notes: model.notes)
         case .shelf: ShelfTab(shelf: model.shelf, actions: actions)
         case .usage: UsageTab(usage: model.usage)
-        case .markets: MarketsTab(markets: model.markets)
         case .plugins: PluginsTab(host: model.plugins)
         }
       }

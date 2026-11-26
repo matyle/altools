@@ -5,7 +5,7 @@ import SwiftUI
 
 final class NotchModel: ObservableObject {
   enum Tab: String, CaseIterable, Identifiable {
-    case home, media, todo, notes, shelf, usage, markets, plugins
+    case home, media, todo, notes, shelf, usage, plugins
     var id: String { rawValue }
     var title: String {
       switch self {
@@ -15,7 +15,6 @@ final class NotchModel: ObservableObject {
       case .notes: "Notes"
       case .shelf: "Shelf"
       case .usage: "AI usage"
-      case .markets: "Markets"
       case .plugins: "Plugins"
       }
     }
@@ -27,7 +26,6 @@ final class NotchModel: ObservableObject {
       case .notes: "note.text"
       case .shelf: "tray.full.fill"
       case .usage: "gauge.with.dots.needle.67percent"
-      case .markets: "chart.line.uptrend.xyaxis"
       case .plugins: "puzzlepiece.extension.fill"
       }
     }
@@ -54,8 +52,7 @@ final class NotchModel: ObservableObject {
     case sensors(SystemSignals.Sensors)
     case ai
     case music
-    case ticker(CryptoTicker.Quote)
-    /// A plugin's ears output; below music, above the ticker.
+    /// A plugin's ears output; below music.
     case plugin(id: String, ears: PluginOutput.Ears)
 
     /// Width of each ear beside the notch.
@@ -74,7 +71,6 @@ final class NotchModel: ObservableObject {
       case .sensors(let s): s.microphoneApp != nil ? 80 : 36
       case .ai: 36
       case .music: 36
-      case .ticker: 60
       case .plugin: 64
       }
     }
@@ -120,9 +116,7 @@ final class NotchModel: ObservableObject {
   let notes = NotesStore()
   let usage = AIUsage()
   let signals = SystemSignals()
-  let ticker = CryptoTicker()
   let agents = AgentInbox.shared
-  let markets = MarketStore()
   let plugins = PluginHost.shared
   let center = ActivityCenter.shared
 
@@ -140,7 +134,6 @@ final class NotchModel: ObservableObject {
        let ears = plugin.output?.ears {
       return .plugin(id: plugin.id, ears: ears)
     }
-    if on("notch.ticker"), let quote = ticker.freshQuote { return .ticker(quote) }
     return nil
   }
 
@@ -256,23 +249,9 @@ final class NotchController {
     }
     model.signals.start()
     if AppSettings.shared.notchAllDisplays { spacer.start() }
-    // The price streams only while its capability is on; the symbol can change any time.
-    AppSettings.shared.$tickerSymbol.combineLatest(AppSettings.shared.$disabledCapabilities)
-      .map { symbol, disabled in disabled.contains("notch.ticker") ? nil : symbol }
-      .removeDuplicates()
-      .debounce(for: .milliseconds(400), scheduler: DispatchQueue.main)
-      .sink { [weak self] symbol in
-        if let symbol { self?.model.ticker.start(symbol: symbol) } else { self?.model.ticker.stop() }
-      }
-      .store(in: &cancellables)
     volume.onChange = { [weak self] level in if on("notch.volume") { self?.model.show(.volume(level), for: 1.6) } }
     volume.start()
     notifications.onBanner = { [weak self] banner in self?.receive(banner) }
-    model.markets.isVisible = { [weak self] in self?.model.expanded == true }
-    model.markets.start()
-    model.$expanded.removeDuplicates().filter { $0 }
-      .sink { [weak self] _ in if on("notch.markets") { self?.model.markets.refresh() } }
-      .store(in: &cancellables)
     model.plugins.onAlert = { [weak self] alert, plugin in self?.showCard(.plugin(id: plugin.id, alert: alert), for: 8) }
     if on("notch.plugins") { model.plugins.start() }
     AppSettings.shared.$disabledCapabilities.map { !$0.contains("notch.plugins") }.removeDuplicates().dropFirst()
@@ -342,7 +321,6 @@ final class NotchController {
       model.reminders.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.signals.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.center.objectWillChange.map { _ in }.eraseToAnyPublisher(),
-      model.ticker.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.plugins.objectWillChange.map { _ in }.eraseToAnyPublisher(),
     ]
     Publishers.MergeMany(sources)
@@ -362,9 +340,7 @@ final class NotchController {
     monitors = []
     cancellables = []
     model.nowPlaying.stop()
-    model.ticker.stop()
     model.agents.stop()
-    model.markets.stop()
     model.plugins.stop()
     model.signals.stop()
     volume.stop()

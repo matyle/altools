@@ -6,7 +6,9 @@ import AppKit
 /// is in AltoolsCore and PLUGINS.md.
 ///
 /// Plugins are arbitrary programs running as the user, so one found on disk starts disabled
-/// until the user switches it on in Settings.
+/// until the user switches it on in Settings. Built-in plugins ship inside the app bundle
+/// (Resources/BuiltinPlugins), start enabled and can be switched off but not removed; a user
+/// plugin with the same id replaces the built-in one.
 final class PluginHost: ObservableObject {
   struct Plugin: Identifiable {
     /// The folder name; equals manifest.id for a valid plugin.
@@ -21,6 +23,8 @@ final class PluginHost: ObservableObject {
     var lastRun: Date?
     var running = false
     var enabled = false
+    /// Shipped with Altools rather than installed by the user.
+    var builtin = false
     /// Recent stderr and run outcomes, newest last.
     var log = ""
 
@@ -31,6 +35,7 @@ final class PluginHost: ObservableObject {
 
   static let shared = PluginHost()
   static var folder: URL { AppPaths.subdirectory("Plugins") }
+  static var builtinFolder: URL? { Bundle.main.url(forResource: "BuiltinPlugins", withExtension: nil) }
 
   @Published private(set) var plugins: [Plugin] = []
   /// Called on the main queue for each alert id a plugin hasn't announced before.
@@ -44,12 +49,14 @@ final class PluginHost: ObservableObject {
 
   private static let logLimit = 8_000
   private static let enabledKey = "enabledPlugins"
+  private static let disabledBuiltinKey = "disabledBuiltinPlugins"
   private static let settingsKey = "pluginSettings"
   private static let seenAlertsKey = "pluginSeenAlerts"
 
   func start() {
     guard !started else { return }
     started = true
+    Self.migrateBuiltinMarkets()
     reload()
     watchFolder()
   }
@@ -67,13 +74,22 @@ final class PluginHost: ObservableObject {
   /// Re-reads every plugin folder, keeping the last output of plugins that are still there.
   func reload() {
     let fm = FileManager.default
-    let folders = (try? fm.contentsOfDirectory(at: Self.folder, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? []
+    func folders(in root: URL?) -> [URL] {
+      guard let root else { return [] }
+      return ((try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? [])
+        .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+    }
+    let user = folders(in: Self.folder)
+    let userIDs = Set(user.map(\.lastPathComponent))
+    let builtins = folders(in: Self.builtinFolder).filter { !userIDs.contains($0.lastPathComponent) }
     let enabled = Self.enabledIDs
+    let disabledBuiltins = Self.disabledBuiltinIDs
     var found: [Plugin] = []
-    for folder in folders where (try? folder.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+    for (folder, builtin) in user.map({ ($0, false) }) + builtins.map({ ($0, true) }) {
       let id = folder.lastPathComponent
-      var plugin = plugins.first { $0.id == id } ?? Plugin(id: id, folder: folder)
-      plugin.enabled = enabled.contains(id)
+      var plugin = plugins.first { $0.id == id && $0.builtin == builtin } ?? Plugin(id: id, folder: folder)
+      plugin.builtin = builtin
+      plugin.enabled = builtin ? !disabledBuiltins.contains(id) : enabled.contains(id)
       plugin.problem = nil
       do {
         let manifest = try PluginManifest.decode(Data(contentsOf: folder.appendingPathComponent("plugin.json")))
@@ -116,9 +132,15 @@ final class PluginHost: ObservableObject {
   // MARK: Enabling and settings
 
   func setEnabled(_ id: String, _ on: Bool) {
-    var ids = Self.enabledIDs
-    if on { ids.insert(id) } else { ids.remove(id) }
-    UserDefaults.standard.set(Array(ids), forKey: Self.enabledKey)
+    if plugins.first(where: { $0.id == id })?.builtin == true {
+      var ids = Self.disabledBuiltinIDs
+      if on { ids.remove(id) } else { ids.insert(id) }
+      UserDefaults.standard.set(Array(ids), forKey: Self.disabledBuiltinKey)
+    } else {
+      var ids = Self.enabledIDs
+      if on { ids.insert(id) } else { ids.remove(id) }
+      UserDefaults.standard.set(Array(ids), forKey: Self.enabledKey)
+    }
     update(id) { $0.enabled = on; if !on { $0.output = nil } }
     reschedule()
     if on { refresh(id) }
@@ -126,6 +148,10 @@ final class PluginHost: ObservableObject {
 
   private static var enabledIDs: Set<String> {
     Set(UserDefaults.standard.stringArray(forKey: enabledKey) ?? [])
+  }
+
+  private static var disabledBuiltinIDs: Set<String> {
+    Set(UserDefaults.standard.stringArray(forKey: disabledBuiltinKey) ?? [])
   }
 
   /// A setting's current value: the Keychain for secrets, user defaults otherwise.
@@ -192,7 +218,7 @@ final class PluginHost: ObservableObject {
 
   private static func execute(_ executable: URL, directory: URL, environment: [String: String], timeout: TimeInterval) -> RunResult {
     var result = RunResult()
-    // Scripts from a zip or written by an editor often lack the executable bit.
+    // Scripts from a zip or written by an editor often lack the executable bit (the app bundle is read-only, so this only fixes user plugins).
     if !FileManager.default.isExecutableFile(atPath: executable.path) {
       try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
     }
@@ -289,6 +315,31 @@ final class PluginHost: ObservableObject {
     case .run(let actionID):
       refresh(id, event: .action(actionID))
     }
+  }
+
+  // MARK: Migration
+
+  /// Markets used to be built into the notch; it is now the built-in "markets" plugin. Carries the
+  /// old watchlist, its on/off switch, the ticker switch and its place on Home over, once.
+  private static func migrateBuiltinMarkets() {
+    let defaults = UserDefaults.standard
+    guard !defaults.bool(forKey: "migratedMarketsToPlugin") else { return }
+    defaults.set(true, forKey: "migratedMarketsToPlugin")
+    var pluginSettings = defaults.dictionary(forKey: settingsKey) as? [String: [String: String]] ?? [:]
+    if let watchlist = defaults.stringArray(forKey: "marketWatchlist"), !watchlist.isEmpty {
+      pluginSettings["markets", default: [:]]["watchlist"] = watchlist.joined(separator: ", ")
+    }
+    // These two live in AppSettings, already loaded; change them there so its next save keeps the change.
+    let settings = AppSettings.shared
+    if settings.disabledCapabilities.contains("notch.ticker") { pluginSettings["markets", default: [:]]["ears"] = "Off" }
+    defaults.set(pluginSettings, forKey: settingsKey)
+    if settings.disabledCapabilities.contains("notch.markets") {
+      defaults.set(Array(disabledBuiltinIDs.union(["markets"])), forKey: disabledBuiltinKey)
+    }
+    settings.disabledCapabilities.subtract(["notch.markets", "notch.ticker"])
+    // HomeSlot no longer reads "markets", so the old card would vanish from Home instead of moving.
+    settings.homeCards = settings.homeCards.map { $0 == "markets" ? "plugin:markets" : $0 }
+    for key in ["marketWatchlist", "tickerSymbol"] { defaults.removeObject(forKey: key) }
   }
 
   // MARK: Helpers

@@ -57,14 +57,10 @@ final class AppSettings: ObservableObject {
   @Published var notchHoverDelay: Double { didSet { save(notchHoverDelay, "notchHoverDelay") } }
   /// Read Now Playing for every player through the system bridge, not just Music and Spotify.
   @Published var notchSystemNowPlaying: Bool { didSet { save(notchSystemNowPlaying, "notchSystemNowPlaying") } }
-  /// Trading pair the notch shows when idle, e.g. BTCUSDT or ETHUSDT.
-  @Published var tickerSymbol: String { didSet { save(tickerSymbol, "tickerSymbol") } }
   /// Cards on the notch's Home tab, in order (HomeCard raw values).
   @Published var homeCards: [String] { didSet { save(homeCards, "homeCards") } }
   /// Buttons along the bottom of Home, in order (HomeAction raw values).
   @Published var homeActions: [String] { didSet { save(homeActions, "homeActions") } }
-  /// The Markets tab's watchlist, as "market:CODE" entries (crypto:BTCUSDT, us:AAPL, hk:00700).
-  @Published var marketWatchlist: [String] { didSet { save(marketWatchlist, "marketWatchlist") } }
   /// Empty means ~/Documents/Altools Notes.
   @Published var notesFolder: String { didSet { save(notesFolder, "notesFolder") } }
   /// Reminders list for new to-dos by name; empty or unmatched uses the default list.
@@ -106,9 +102,7 @@ final class AppSettings: ObservableObject {
     notchDrawOnExternal = defaults.object(forKey: "notchDrawOnExternal") as? Bool ?? true
     notchSystemNowPlaying = defaults.object(forKey: "notchSystemNowPlaying") as? Bool ?? true
     notesFolder = defaults.string(forKey: "notesFolder") ?? ""
-    tickerSymbol = defaults.string(forKey: "tickerSymbol") ?? "BTCUSDT"
-    marketWatchlist = defaults.stringArray(forKey: "marketWatchlist") ?? MarketStore.defaultWatchlist
-    homeCards = defaults.stringArray(forKey: "homeCards") ?? HomeCard.defaults.map(\.rawValue)
+    homeCards = defaults.stringArray(forKey: "homeCards") ?? HomeSlot.defaults.map(\.rawValue)
     homeActions = defaults.stringArray(forKey: "homeActions") ?? HomeAction.defaults.map(\.rawValue)
     todoList = defaults.string(forKey: "todoList") ?? ""
     claudeUsageConnected = defaults.object(forKey: "claudeUsageConnected") as? Bool ?? false

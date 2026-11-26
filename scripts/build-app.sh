@@ -21,6 +21,7 @@ cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 # The plugin guide (read by the AI plugin maker) and the example plugins (Settings › Install examples).
 cp "$root/PLUGINS.md" "$app/Contents/Resources/PLUGINS.md"
 cp -R "$root/examples/plugins" "$app/Contents/Resources/PluginExamples"
+cp -R "$root/Resources/BuiltinPlugins" "$app/Contents/Resources/BuiltinPlugins"
 
 # System Now Playing bridge, loaded into /usr/bin/perl at runtime (see NowPlaying.swift).
 mkdir -p "$app/Contents/Frameworks"

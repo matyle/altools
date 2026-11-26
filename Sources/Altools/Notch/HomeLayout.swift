@@ -2,16 +2,15 @@ import SwiftUI
 
 /// The cards on the notch's Home tab, in the order Settings › Notch › Home layout keeps.
 enum HomeCard: String, CaseIterable, Identifiable {
-  case media, agenda, markets, usage
+  case media, agenda, usage
   var id: String { rawValue }
 
-  static let defaults: [HomeCard] = [.media, .agenda, .markets]
+  static let defaults: [HomeCard] = [.media, .agenda]
 
   var title: String {
     switch self {
     case .media: "Now playing"
     case .agenda: "Calendar & to-dos"
-    case .markets: "Markets"
     case .usage: "AI usage"
     }
   }
@@ -20,7 +19,6 @@ enum HomeCard: String, CaseIterable, Identifiable {
     switch self {
     case .media: "music.note"
     case .agenda: "calendar"
-    case .markets: "chart.line.uptrend.xyaxis"
     case .usage: "gauge.with.dots.needle.67percent"
     }
   }
@@ -30,7 +28,6 @@ enum HomeCard: String, CaseIterable, Identifiable {
     switch self {
     case .media: 206
     case .agenda: nil
-    case .markets: 128
     case .usage: 140
     }
   }
@@ -38,7 +35,6 @@ enum HomeCard: String, CaseIterable, Identifiable {
   /// The capability that must be on for the card to show; nil when it has none.
   var capability: String? {
     switch self {
-    case .markets: "notch.markets"
     case .usage: "notch.usage"
     default: nil
     }
@@ -110,6 +106,9 @@ enum HomeAction: String, CaseIterable, Identifiable {
 enum HomeSlot: Hashable, Identifiable {
   case builtin(HomeCard)
   case plugin(String)
+
+  /// Home out of the box: Now playing, Calendar & to-dos, and the built-in Markets plugin.
+  static let defaults: [HomeSlot] = HomeCard.defaults.map(HomeSlot.builtin) + [.plugin("markets")]
 
   /// Stored form in `AppSettings.homeCards`: a HomeCard raw value, or "plugin:<id>".
   init?(rawValue: String) {
@@ -195,7 +194,7 @@ struct HomeLayoutEditor: View {
         }
       }
       Button("Reset to default") {
-        settings.homeSlotList = HomeCard.defaults.map(HomeSlot.builtin)
+        settings.homeSlotList = HomeSlot.defaults
         settings.homeActionList = HomeAction.defaults
       }
       .buttonStyle(SoftPillButtonStyle())

@@ -97,6 +97,10 @@ private struct PluginCard: View {
             if let manifest = plugin.manifest {
               Text("v\(manifest.version)\(manifest.author.map { " · \($0)" } ?? "")").font(.system(size: 11)).foregroundStyle(Theme.faint)
             }
+            if plugin.builtin {
+              Text("Built in").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.accent)
+                .padding(.horizontal, 6).padding(.vertical, 1).background(Theme.accent.opacity(0.14), in: Capsule())
+            }
           }
           Text(plugin.manifest?.summary ?? plugin.folder.lastPathComponent).font(.system(size: 11.5)).foregroundStyle(Theme.dim).lineLimit(2)
         }
@@ -120,7 +124,7 @@ private struct PluginCard: View {
           Button("Fix with AI", action: fix).disabled(fixing)
         }
         Spacer()
-        Button("Remove") { remove() }
+        if !plugin.builtin { Button("Remove") { remove() } }
       }
       .buttonStyle(SoftPillButtonStyle())
       if showLog {

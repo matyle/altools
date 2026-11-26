@@ -45,7 +45,6 @@ struct HomeTab: View {
     switch slot {
     case .builtin(.media): mediaCard
     case .builtin(.agenda): agenda
-    case .builtin(.markets): MarketsSummary(markets: model.markets)
     case .builtin(.usage): UsageSummary(usage: model.usage)
     case .plugin(let id):
       if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginHomeCard(plugin: plugin) }
@@ -55,7 +54,6 @@ struct HomeTab: View {
   private func open(_ slot: HomeSlot) {
     let tab: NotchModel.Tab? = switch slot {
     case .builtin(.media): .media
-    case .builtin(.markets): .markets
     case .builtin(.usage): .usage
     case .builtin(.agenda): nil
     case .plugin(let id): plugins.plugins.first { $0.id == id }?.shows(.tab) == true ? .plugins : nil
