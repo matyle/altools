@@ -9,7 +9,7 @@ It can also have no UI at all and only pop alerts when something happens. A plug
 prints JSON saying what to show. That is the whole API.
 
 You can write one by hand, ask Claude Code or any other coding agent to write it from this page, or
-use **Settings › Notch › Plugins › Make a plugin** and describe what you want.
+use **Settings › Plugins › Make a plugin** and describe what you want.
 
 ## Folder
 
@@ -252,11 +252,11 @@ Give your agent this page and a sentence, for example:
 > that shows the top 5 Hacker News stories in the Plugins tab and the top score in the ears.
 > Run it once with `ALTOOLS_EVENT=refresh` and check it prints valid JSON.
 
-Then switch it on in Settings › Notch › Plugins.
+Then switch it on in Settings › Plugins.
 
 ## Share and publish
 
-**A file.** Settings › Notch › Plugins › **Export…** saves a plugin as `<id>.altoolsplugin` (the
+**A file.** Settings › Plugins › **Export…** saves a plugin as `<id>.altoolsplugin` (the
 folder, zipped). Anyone with Altools double-clicks it, drags it onto Altools, or uses **Import…**;
 Altools shows the name, author and where it appears, and installs only after they confirm.
 
@@ -271,7 +271,7 @@ altools://install-plugin?repo=you/plugins&path=weather&ref=v1.2
 `url=https://…` form installs any zip that holds a plugin. Pasting `you/your-plugin` or a GitHub
 link into **Install from GitHub** in Settings does the same.
 
-**The store.** Settings › Notch › Plugins › **Plugin store** lists:
+**The store.** Settings › Plugins › **Plugin store** lists:
 
 - every public GitHub repository with the topic **`altools-plugin`** and a `plugin.json` at its root.
   To publish, push your plugin and add the topic (repository › About › ⚙ › Topics). Stars sort

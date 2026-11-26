@@ -84,7 +84,7 @@ final class PluginMaker: ObservableObject {
     Don't touch other folders unless the user asks you to fix that plugin.
     - Prefer sh, curl and python3 with only the standard library. Make the program executable.
     - If it needs an API key or account, declare a "secret" setting and, when it's empty, output a row \
-    telling the user what to fill in under Settings › Notch › Plugins.
+    telling the user what to fill in under Settings › Plugins.
     - Run it once with ALTOOLS_EVENT=refresh and the ALTOOLS_SETTING_* variables it uses, and make sure it \
     prints one valid JSON object and exits 0. Fix it until it does.
     - Finish with two or three sentences: what it shows where, and any setting to fill in. Reply in the \

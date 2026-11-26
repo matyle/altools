@@ -91,7 +91,7 @@ const CN_NUMBERS = { "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
 
 function parseQuick(text, projects, now = new Date()) {
   let rest = " " + text.trim() + " "
-  const take = (re, fn) => { const m = rest.match(re); if (!m) return; rest = rest.replace(m[0], " "); fn(m) }
+  const take = (re, fn) => { const m = rest.match(re); if (!m) return; rest = rest.replace(m[0], " \u0001 "); fn(m) }
   let priority = 0, list = null, day = null, time = null
 
   take(/\s!(\S+)/, m => { priority = PRIORITIES[m[1].toLowerCase()] || 0 })
@@ -102,7 +102,7 @@ function parseQuick(text, projects, now = new Date()) {
   })
 
   // Times: 3pm, 3:30pm, 15:30, 下午3点, 晚上8点半, 10点
-  take(/\s(\d{1,2})(?::(\d\d))?\s*(am|pm)\s/i, m => {
+  take(/\s(\d{1,2})(?::(\d\d))?\s*(am|pm)(?=[\s,.，。])/i, m => {
     let h = Number(m[1]) % 12
     if (m[3].toLowerCase() === "pm") h += 12
     time = [h, Number(m[2] || 0)]
@@ -120,7 +120,7 @@ function parseQuick(text, projects, now = new Date()) {
   take(/今天|\stoday\s|\stod\s/i, () => { day = today })
   if (!day) take(/明天|\stomorrow\s|\stmr\s|\stmrw\s/i, () => { day = addDays(today, 1) })
   if (!day) take(/后天/, () => { day = addDays(today, 2) })
-  if (!day) take(/(下|这|本)?(?:周|星期|礼拜)([一二三四五六日天])|\s(next\s)?(sun|mon|tue|wed|thu|fri|sat)[a-z]*\s/i, m => {
+  if (!day) take(/(下|这|本)?(?:周|星期|礼拜)([一二三四五六日天])|\s(next\s)?(sun|mon|tue|wed|thu|fri|sat)[a-z]*(?=[\s,.，。])/i, m => {
     const target = WEEKDAYS[m[2] || m[4].slice(0, 3).toLowerCase()]
     // "下周一" / "next mon": that day in the week after this one (weeks start on Monday); otherwise the next one from today.
     const nextWeek = m[1] === "下" || !!m[3]
@@ -143,7 +143,9 @@ function parseQuick(text, projects, now = new Date()) {
     due = day
     allDay = true
   }
-  const title = rest.replace(/\s+/g, " ").trim()
+  // Drop the gaps left by what was taken out, with an "at" / "on" / "by" that led into them.
+  const title = rest.replace(/\s(?:at|on|by)\s+\u0001/gi, " ").replace(/\u0001/g, " ").replace(/\s+/g, " ")
+    .replace(/\s+([,，。.])/g, "$1").replace(/^[\s,，。.]+|[\s,，。.]+$/g, "")
   return { title, due, allDay, priority, list }
 }
 
@@ -155,8 +157,10 @@ function describe(p) {
   return parts.join(" · ")
 }
 
-function create(text, projects) {
+// `keepTitle`: selected text is prose, so its words stay in the title and only the due date is read from it.
+function create(text, projects, keepTitle = false) {
   const p = parseQuick(text, projects)
+  if (keepTitle) p.title = text.trim()
   if (!p.title) return null
   const body = { title: p.title, priority: p.priority }
   if (p.list && !p.list.missing) body.projectId = p.list.id
@@ -349,7 +353,7 @@ try {
     const cache = readJSON(CACHE) || fetchAll()
     const lines = INPUT.trim().split(/\r?\n/).filter(l => l.trim())
     if (!lines.length) emit({ result: { text: t("Nothing selected", "没有选中文字") } })
-    const made = create(lines[0].slice(0, 200), cache.projects)
+    const made = create(lines[0].slice(0, 200), cache.projects, true)
     if (lines.length > 1) call("POST", `/task/${made.task.id}`, { id: made.task.id, projectId: made.task.projectId, content: lines.slice(1).join("\n") })
     cache.tasks.push(made.task)
     writeJSON(CACHE, cache)

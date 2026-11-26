@@ -7,7 +7,7 @@
 Altools 定时运行这个程序，程序打印一段 JSON 告诉 Altools 要显示什么。整个 API 就这么多。
 
 你可以手写，也可以把这一页交给 Claude Code 或其他编程 agent 让它来写，或者在
-**设置 › 刘海 › 插件 › 用 AI 做一个插件** 里直接描述你想要什么。
+**设置 › 插件 › 用 AI 做一个插件** 里直接描述你想要什么。
 
 ## 文件夹
 
@@ -238,11 +238,11 @@ EOF
 > 在「插件」页显示 Hacker News 前 5 条，在刘海旁边显示第一条的分数。
 > 用 `ALTOOLS_EVENT=refresh` 运行一次，确认它打印的是合法 JSON。
 
-然后在 设置 › 刘海 › 插件 里打开它。
+然后在 设置 › 插件 里打开它。
 
 ## 分享和发布
 
-**文件。** 设置 › 刘海 › 插件 › **导出…** 会把插件存成 `<id>.altoolsplugin`（就是压缩后的文件夹）。
+**文件。** 设置 › 插件 › **导出…** 会把插件存成 `<id>.altoolsplugin`（就是压缩后的文件夹）。
 别人装了 Altools 后，双击它、拖到 Altools 上，或者用 **导入…** 都可以安装；Altools 会先显示名字、作者和显示位置，
 确认后才安装。
 
@@ -256,7 +256,7 @@ altools://install-plugin?repo=you/plugins&path=weather&ref=v1.2
 `path` 指向子文件夹里的插件，`ref` 指定分支或标签（默认是默认分支）。`url=https://…` 可以安装任何包含插件的 zip。
 在设置里的 **从 GitHub 安装** 粘贴 `you/your-plugin` 或 GitHub 链接，效果一样。
 
-**插件商店。** 设置 › 刘海 › 插件 › **插件商店** 会列出：
+**插件商店。** 设置 › 插件 › **插件商店** 会列出：
 
 - 所有带 **`altools-plugin`** 话题（topic）、根目录有 `plugin.json` 的公开 GitHub 仓库。
   发布方法：推送插件，再给仓库加上这个话题（仓库 › About › ⚙ › Topics）。按 star 数排序。

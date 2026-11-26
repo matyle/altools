@@ -294,3 +294,25 @@ html[lang="zh"] .st-row.live b::after { content: "本页可体验"; }
   .m-note { font-size: 12px !important; color: var(--faint) !important; }
   #mobile > img { width: 100%; border-radius: 14px; }
 }
+
+/* TickTick plugin tab */
+.tt { display: flex; flex-direction: column; gap: 7px; max-height: 158px; overflow-y: auto; padding-right: 4px; }
+.tt-head { display: flex; align-items: center; gap: 8px; }
+.tt-head b { font-size: 15px; }
+.tt-head .pill-red { font-size: 10px; font-weight: 700; color: var(--red); background: color-mix(in srgb, var(--red) 18%, transparent); border-radius: 999px; padding: 1px 8px; }
+.tt-sec { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.55); margin-top: 2px; }
+.tt-sec.red { color: var(--red); }
+.tt-sec i { font-style: normal; color: rgba(255,255,255,.3); margin-left: 4px; }
+.tt-row { display: flex; align-items: center; gap: 9px; font-size: 12px; }
+.tt-row .ck { width: 14px; height: 14px; border-radius: 50%; border: 1.7px solid currentColor; flex: none; color: rgba(255,255,255,.4); cursor: pointer; transition: background .15s; }
+.tt-row .ck:hover { background: currentColor; }
+.tt-row .ti { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-row .ls { font-size: 9px; font-weight: 700; color: rgba(255,255,255,.55); background: rgba(255,255,255,.08); border-radius: 999px; padding: 1px 7px; }
+.tt-row .du { width: 76px; text-align: right; font-size: 11px; color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; }
+.tt-row.over .du { color: var(--red); }
+.tt-row.done { opacity: .35; }
+.tt-row.done .ti { text-decoration: line-through; }
+.tt-row.fresh .ti { color: var(--green); }
+.tt-hint { font-size: 10px; color: rgba(255,255,255,.35); }
+.tt-hint kbd { font-size: 9px; padding: 0 4px; }
+#selbar .sel-plugin { color: #8aa7ff; }

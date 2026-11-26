@@ -2,7 +2,7 @@ import AltoolsCore
 import AppKit
 import SwiftUI
 
-/// Settings › Notch › Plugins: make a plugin with AI, install the examples, and switch each
+/// Settings › Plugins: make a plugin with AI, install the examples, and switch each
 /// plugin on, fill in its settings and read its log.
 struct PluginSettingsView: View {
   @ObservedObject private var host = PluginHost.shared

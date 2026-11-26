@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md) · [Homepage — try it in the browser](https://matyle.github.io/altools/)
 
-A native macOS menu-bar toolkit: a launcher with clipboard history and AI, actions on selected text, screenshots with annotation and OCR, a notch island with live activity, menu-bar widgets, and a menu-bar icon hider. Written in Swift and SwiftUI, no Electron, no account.
+A native macOS menu-bar toolkit: a launcher with clipboard history and AI, actions on selected text, screenshots with annotation and OCR, a notch island with live activity, menu-bar widgets, a menu-bar icon hider, and plugins you can write in any language. Written in Swift and SwiftUI, no Electron, no account.
 
 ![Notch home](docs/screenshots/notch-home.png)
 
@@ -11,18 +11,36 @@ A native macOS menu-bar toolkit: a launcher with clipboard history and AI, actio
 ### Notch island
 Hover the notch (or press ⌥N) for a panel with now playing, your next meeting and to-dos, a market watchlist and quick actions. While it is closed, the "ears" beside the notch show what is happening now: playback, a meeting countdown, volume, charging, camera and microphone use, finished downloads.
 
-- **Tabs:** Home, Media, To-do (Reminders), Notes (Markdown files), Shelf (drop files), AI usage, Markets.
+- **Tabs:** Home, Media, To-do (Reminders), Notes (Markdown files), Shelf (drop files), AI usage, and one for each plugin with a page.
 - **Meeting reminders:** a minute before a calendar meeting, a card drops with a countdown and a **Join** button that opens Zoom, Teams or Tencent Meeting in its app (Google Meet in the browser); the ears count down until it starts.
 - **Agent alerts:** when an agent in a [tuios](https://tuios.dev/) pane needs approval, has a question, errors or finishes, a card drops from the notch; click it to jump to that pane.
-- **Markets:** crypto pairs, US and Hong Kong stocks; add them by name or code.
 - **AI usage:** Claude Code's 5-hour and weekly plan quotas, and tokens used today.
-- **Plugins:** put your own widgets in the notch (beside it, on Home, in their own tab, as alert cards), laid out however you like, or no UI at all and just event-driven alerts, with a folder holding `plugin.json` and a script in any language. Markets ships as a built-in plugin. Describe one and Claude Code writes it for you, or see the [plugin guide](PLUGINS.md) and [examples](examples/plugins) such as TickTick / 滴答清单.
 - On displays without a notch it can draw one, or show only while something is live.
 
 | | |
 |---|---|
-| ![Markets](docs/screenshots/notch-markets.png) | ![AI usage](docs/screenshots/notch-ai-usage.png) |
-| ![Meeting reminder](docs/screenshots/notch-meeting-card.png) | ![Agent card](docs/screenshots/notch-agent-card.png) |
+| ![AI usage](docs/screenshots/notch-ai-usage.png) | ![Meeting reminder](docs/screenshots/notch-meeting-card.png) |
+| ![Agent card](docs/screenshots/notch-agent-card.png) | |
+
+### Plugins
+Add your own features with a folder holding `plugin.json` and a script in any language (shell, Python, the JavaScript macOS already has, a compiled binary). Altools runs it and draws what it prints; the [plugin guide](PLUGINS.md) is the whole contract.
+
+| Where | What a plugin can add |
+|---|---|
+| Notch | Short status beside the notch, a Home card, its own tab, alert cards |
+| Menu bar | Its own item, with a panel showing the plugin's page |
+| Launcher | Commands (each can have a global hotkey) and a search keyword, such as `tt` or `mk` |
+| Selected text | Actions in the selection bar, whose result can replace the selection |
+
+- **Your own layout:** plugins describe their UI as a tree of stacks, grids, cards, text, symbols, badges, progress bars and sparklines, drawn natively like a widget. Or no UI at all: a plugin can stay running and pop a card only when something happens.
+- **Share:** export a plugin as an `.altoolsplugin` file, import one, or install from a GitHub folder. Settings › Plugins › **Plugin store** lists featured plugins and any repository tagged `altools-plugin`.
+- **Write one with AI:** describe what you want in Settings › Plugins and Claude Code writes it, reading the same guide.
+- **Built in:** Markets, with crypto, US and Hong Kong stocks added by name or code, sparklines, a launcher search (`mk 腾讯`) and an optional menu-bar ticker.
+- **Examples:** [TickTick / 滴答清单](examples/plugins/ticktick) (read today's tasks, add one with `tt buy milk tomorrow 3pm #Work !high` or from selected text, click to complete), [text tools](examples/plugins/text-tools), [site monitor](examples/plugins/site-monitor) and [more](examples/plugins).
+
+| | |
+|---|---|
+| ![Markets plugin](docs/screenshots/notch-markets.png) | ![TickTick plugin](docs/screenshots/notch-ticktick.png) |
 
 ### Launcher
 ⌥ Space opens one box for apps, commands, maths and clipboard history. Press ⇥ to ask AI through your local **Claude Code** or **Codex** CLI, with a chosen tool access level (none, read-only, edit files, full).
@@ -100,4 +118,5 @@ ALTOOLS_RENDER_DIR=/tmp/altools-render "$(swift build -c debug --show-bin-path)/
 - AI requests go through the Claude Code or Codex CLI you already have, with its own sign-in.
 - Clipboard history stays local and skips items password managers mark as secret.
 - Notification text is read to show the card and is never stored or sent.
-- Network requests: market prices (Binance for crypto, Tencent's public quote service for stocks), and Claude Code's usage endpoint when you connect AI usage.
+- Network requests: the Markets plugin's prices (Binance for crypto, Tencent's public quote service and Yahoo Finance for stocks), and Claude Code's usage endpoint when you connect AI usage.
+- Plugins run on your Mac with your permissions and make only the requests their scripts make; install ones you trust. Secret plugin settings are kept in the Keychain.
