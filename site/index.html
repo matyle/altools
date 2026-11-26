@@ -8,8 +8,9 @@
   <meta property="og:title" content="Altools for macOS">
   <meta property="og:description" content="A notch island, launcher, clipboard, AI and menu-bar tools in one native Mac app. Free and open source.">
   <meta property="og:image" content="assets/notch-home.png">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%2361AFEF'/%3E%3Cg fill='%23fff'%3E%3Ccircle cx='7' cy='7' r='2'/%3E%3Ccircle cx='12' cy='7' r='2'/%3E%3Ccircle cx='17' cy='7' r='2'/%3E%3Ccircle cx='7' cy='12' r='2'/%3E%3Crect x='10' y='10' width='4' height='4' rx='1'/%3E%3Ccircle cx='17' cy='12' r='2'/%3E%3Ccircle cx='7' cy='17' r='2'/%3E%3Ccircle cx='12' cy='17' r='2'/%3E%3Ccircle cx='17' cy='17' r='2'/%3E%3C/g%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <!-- Read by search engines and screen readers; the desktop below is the visual version. -->
@@ -129,14 +130,14 @@
 
     <!-- Welcome notification -->
     <div id="welcome" class="notice">
-      <span class="app-icon" data-icon="grid"></span>
+      <img class="app-icon" src="assets/icon.png" alt="">
       <div><b data-i18n="welcomeTitle">Altools is running</b><span data-i18n="welcomeBody">This page is a live demo. Hover the notch, press ⌥ Space, select text in Notes, or open Settings and switch modules off.</span></div>
       <button id="welcome-open" data-i18n="openSettings">Open Settings</button>
     </div>
 
     <!-- Desktop icons -->
     <div id="desk-icons">
-      <button class="desk-icon" data-open="settings"><span class="tile t-blue-bg" data-icon="gear"></span><em data-i18n="iconSettings">Altools Settings</em></button>
+      <button class="desk-icon" data-open="settings"><img class="tile img" src="assets/icon.png" alt=""><em data-i18n="iconSettings">Altools Settings</em></button>
       <button class="desk-icon" data-open="notes"><span class="tile t-yellow-bg" data-icon="note"></span><em data-i18n="iconNotes">Notes</em></button>
       <a class="desk-icon" href="https://github.com/matyle/altools/releases/latest"><span class="tile t-green-bg" data-icon="download"></span><em data-i18n="iconDownload">Download</em></a>
       <a class="desk-icon" href="https://github.com/matyle/altools"><span class="tile t-dark-bg" data-icon="github"></span><em>GitHub</em></a>
@@ -205,7 +206,7 @@
 
     <!-- Dock -->
     <nav id="dock">
-      <button data-open="settings" title="Settings"><span class="tile t-blue-bg" data-icon="gear"></span></button>
+      <button data-open="settings" title="Altools Settings"><img class="tile img" src="assets/icon.png" alt=""></button>
       <button data-open="launcher" title="Launcher (⌥ Space)"><span class="tile t-purple-bg" data-icon="search"></span></button>
       <button data-open="notes" title="Notes"><span class="tile t-yellow-bg" data-icon="note"></span></button>
       <i class="sep"></i>
@@ -217,7 +218,7 @@
   <!-- Narrow screens get a plain page instead of the desktop. -->
   <main id="mobile">
     <div class="m-hero">
-      <span class="m-logo" data-icon="grid"></span>
+      <img class="m-logo" src="assets/icon.png" alt="Altools icon">
       <h1>Altools</h1>
       <p data-i18n="mTagline">A notch island, launcher, clipboard, AI and menu-bar tools in one native Mac app.</p>
       <a class="m-btn" href="https://github.com/matyle/altools/releases/latest" data-i18n="mDownload">Download for macOS</a>
@@ -231,6 +232,6 @@
     <img src="assets/settings-overview.png" alt="Settings">
   </main>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

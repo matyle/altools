@@ -11,7 +11,7 @@
   // ---------- Icons (stroke drawings on a 24-unit grid) ----------
   const P = (d, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
   const ICONS = {
-    grid: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="2.2"/><circle cx="12" cy="6" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="6" cy="12" r="2.2"/><rect x="9.6" y="9.6" width="4.8" height="4.8" rx="1.2"/><circle cx="18" cy="12" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="12" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>`,
+    grid: `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="1.4" width="12" height="3.4" rx="1.7"/><rect x="4.3" y="7.4" width="4" height="4" rx="1.1"/><rect x="9.7" y="7.4" width="4" height="4" rx="1.1"/><rect x="15.1" y="7.4" width="4" height="4" rx="1.1"/><rect x="4.3" y="12.8" width="4" height="4" rx="1.1"/><rect x="9.7" y="12.8" width="4" height="4" rx="1.1"/><rect x="15.1" y="12.8" width="4" height="4" rx="1.1"/><rect x="4.3" y="18.2" width="4" height="4" rx="1.1"/><rect x="9.7" y="18.2" width="4" height="4" rx="1.1"/><rect x="15.1" y="18.2" width="4" height="4" rx="1.1"/></svg>`,
     cloud: P('<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.5A3.3 3.3 0 0 0 7 18z"/>'),
     chat: P('<path d="M4 5h16v11H9l-5 4z"/>'),
     shield: P('<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>'),
@@ -132,7 +132,7 @@
     document.documentElement.lang = lang;
     $$("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
     $("#lang-btn").textContent = lang === "zh" ? "中" : "EN";
-    renderMarkets(); renderSettings(); renderAgentStrip(); updateMeeting();
+    renderMarkets(); renderSettings(); renderAgentStrip(); updateMeeting(); renderTerminal();
     if (!$("#launcher").hidden) renderLauncher();
   }
 
@@ -312,15 +312,24 @@
     paintIcons(strip);
   }
   $("#agent-strip").addEventListener("click", () => { if (waiting[0]) openAgent(waiting[0]); collapse(); });
+  let termAgent = null, termAnswered = false;
   function openAgent(a) {
     waiting = waiting.filter(x => x !== a); renderAgentStrip();
+    termAgent = a; termAnswered = false;
+    renderTerminal();
+    openWindow("terminal");
+  }
+  function renderTerminal() {
+    const a = termAgent;
+    if (!a) return;
     $("#term-title").textContent = `tuios — ${a.name}`;
     const lines = a.term[lang].map(l => `<div>${l || "&nbsp;"}</div>`).join("");
     const prompt = `<div><span class='c'>›</span> claude</div>`;
-    const opts = a.kind === "approval" ? `<div class="opts"><button data-ans="1">${t("termAllow")}</button><button data-ans="0">${t("termDeny")}</button></div>` : "";
+    const answered = `<div class="g" style="margin-top:10px">✓ ${t("termAnswered")}</div>`;
+    const opts = a.kind !== "approval" ? "" : termAnswered ? answered
+      : `<div class="opts"><button data-ans="1">${t("termAllow")}</button><button data-ans="0">${t("termDeny")}</button></div>`;
     $("#term-body").innerHTML = prompt + lines + opts;
-    $$("#term-body .opts button").forEach(b => b.addEventListener("click", () => { $("#term-body .opts").outerHTML = `<div class="g" style="margin-top:10px">✓ ${t("termAnswered")}</div>`; }));
-    openWindow("terminal");
+    $$("#term-body .opts button").forEach(b => b.addEventListener("click", () => { termAnswered = true; renderTerminal(); }));
   }
 
   // ---------- Windows ----------
