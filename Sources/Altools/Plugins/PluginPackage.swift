@@ -56,7 +56,9 @@ enum PluginPackage {
         try run("/usr/bin/ditto", ["-x", "-k", url.path, staging.path])
         root = staging
       }
-      guard let folder = findPlugin(in: root, subpath: subpath) else {
+      var cancelled = false
+      guard let folder = findPlugin(in: root, subpath: subpath, cancelled: &cancelled) else {
+        if cancelled { return }
         throw PackageError("no plugin.json in \(source)")
       }
       let manifest = try PluginManifest.decode(Data(contentsOf: folder.appendingPathComponent("plugin.json")))
@@ -188,14 +190,16 @@ enum PluginPackage {
 
   // MARK: Helpers
 
-  /// plugin.json at `root/subpath`, at the root, or one or two folders down (an archive's
-  /// top folder, or a repository's single plugin folder).
-  private static func findPlugin(in root: URL, subpath: String?) -> URL? {
+  /// The plugin folder in an archive or folder: `root/subpath` when given (also under the archive's
+  /// top folder), otherwise every folder with a plugin.json up to five levels down (a GitHub
+  /// "Download ZIP" puts examples/plugins/<id> under a top folder). With several, the user picks one.
+  private static func findPlugin(in root: URL, subpath: String?, cancelled: inout Bool) -> URL? {
     let fm = FileManager.default
     let has = { (folder: URL) in fm.fileExists(atPath: folder.appendingPathComponent("plugin.json").path) }
+    let skipped: Set<String> = ["__MACOSX", "node_modules", ".git", ".build"]
     let children = { (folder: URL) in
       ((try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? [])
-        .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true && $0.lastPathComponent != "__MACOSX" }
+        .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true && !skipped.contains($0.lastPathComponent) }
     }
     if let subpath, !subpath.contains("..") {
       let direct = root.appendingPathComponent(subpath)
@@ -203,17 +207,46 @@ enum PluginPackage {
       for top in children(root) where has(top.appendingPathComponent(subpath)) { return top.appendingPathComponent(subpath) }
       return nil
     }
-    if has(root) { return root }
-    for child in children(root) {
-      if has(child) { return child }
-      let inner = children(child).filter(has)
-      if inner.count == 1 { return inner[0] }
+    // Breadth-first, and a plugin folder's own subfolders aren't searched.
+    var found: [URL] = []
+    var level = [root]
+    for _ in 0...5 where !level.isEmpty {
+      var next: [URL] = []
+      for folder in level {
+        if has(folder) { found.append(folder) } else { next += children(folder) }
+      }
+      level = next
     }
-    return nil
+    if found.count <= 1 { return found.first }
+    let chosen = choose(among: found)
+    cancelled = chosen == nil
+    return chosen
+  }
+
+  /// Asks which plugin to install when an archive holds several.
+  private static func choose(among folders: [URL]) -> URL? {
+    #if DEBUG
+    if autoConfirm { return folders.first }
+    #endif
+    let names = folders.map { folder -> String in
+      let manifest = try? PluginManifest.decode(Data(contentsOf: folder.appendingPathComponent("plugin.json")))
+      return manifest.map { "\($0.name) (\($0.id))" } ?? folder.lastPathComponent
+    }
+    let alert = NSAlert()
+    alert.messageText = "This download holds \(folders.count) plugins"
+    alert.informativeText = "Choose the one to install; import the file again for another."
+    let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 280, height: 26), pullsDown: false)
+    popup.addItems(withTitles: names)
+    alert.accessoryView = popup
+    alert.addButton(withTitle: "Continue")
+    alert.addButton(withTitle: "Cancel")
+    NSApp.activate()
+    guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+    return folders[popup.indexOfSelectedItem]
   }
 
   #if DEBUG
-  /// Debug runtime test only: install without the confirmation dialog.
+  /// Debug runtime tests only: install without the confirmation dialog.
   static var autoConfirm = false
   #endif
 

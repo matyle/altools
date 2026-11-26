@@ -8,6 +8,19 @@ import SwiftUI
 /// them through the real PluginHost, prints what each produced, exercises a `run` action, renders the
 /// notch surfaces they feed, then removes the folders it added and quits.
 enum DebugPluginTest {
+  /// ALTOOLS_IMPORT_TEST=<zip or folder>: imports it without the confirmation and prints what landed.
+  static func importIfRequested() -> Bool {
+    guard let path = ProcessInfo.processInfo.environment["ALTOOLS_IMPORT_TEST"] else { return false }
+    PluginPackage.autoConfirm = true
+    let before = Set((try? FileManager.default.contentsOfDirectory(atPath: PluginHost.folder.path)) ?? [])
+    PluginPackage.install(from: URL(fileURLWithPath: path), source: "test")
+    let added = Set((try? FileManager.default.contentsOfDirectory(atPath: PluginHost.folder.path)) ?? []).subtracting(before)
+    print("IMPORTED \(added.sorted())")
+    for id in added { try? FileManager.default.removeItem(at: PluginHost.folder.appendingPathComponent(id)) }
+    NSApp.terminate(nil)
+    return true
+  }
+
   static func runIfRequested() -> Bool {
     let env = ProcessInfo.processInfo.environment
     guard let dir = env["ALTOOLS_PLUGIN_TEST"], let examples = env["ALTOOLS_PLUGIN_EXAMPLES"] else { return false }
