@@ -36,7 +36,7 @@ struct HomeTab: View {
     settings.homeSlotList.filter { slot in
       switch slot {
       case .builtin(let card): card.capability.map(settings.isOn) ?? true
-      case .plugin(let id): settings.isOn("notch.plugins") && plugins.plugins.contains { $0.id == id && $0.enabled && $0.manifest?.slots.contains(.home) == true }
+      case .plugin(let id): settings.pluginsEnabled && plugins.plugins.contains { $0.id == id && $0.enabled && $0.manifest?.slots.contains(.home) == true }
       }
     }
   }

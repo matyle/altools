@@ -121,7 +121,8 @@ final class SelectionController {
         self?.hideBar()
         self?.askAI(text)
       },
-      onTransform: { [weak self] transform in self?.runTransform(transform) }
+      onTransform: { [weak self] transform in self?.runTransform(transform) },
+      pluginActions: pluginActions()
     )
     bar.setRoot(view)
     let size = NSHostingView(rootView: view).fittingSize
@@ -155,6 +156,38 @@ final class SelectionController {
     result.staticText = ""
     showResultPanel()
     runner.send(action.prompt(for: currentText), mode: .quick, showPrompt: false)
+  }
+
+  /// Every enabled plugin's `selection` actions.
+  private func pluginActions() -> [SelectionPluginAction] {
+    guard AppSettings.shared.pluginsEnabled else { return [] }
+    return PluginHost.shared.plugins.filter { $0.enabled && $0.problem == nil }.flatMap { plugin in
+      (plugin.manifest?.selectionActions ?? []).map { action in
+        SelectionPluginAction(id: "\(plugin.id).\(action.id)", title: action.title,
+                              icon: action.icon ?? plugin.manifest?.icon ?? "puzzlepiece.extension") { [weak self] in
+          self?.runPluginAction(plugin.id, action)
+        }
+      }
+    }
+  }
+
+  /// Sends the selection to a plugin and shows its `result`; Replace appears when the plugin asks for it.
+  func runPluginAction(_ pluginID: String, _ action: PluginCommand) {
+    hideBar()
+    let text = currentText
+    result.title = action.title
+    result.aiAction = nil
+    result.source = text
+    result.mode = .text
+    result.staticText = "Running…"
+    result.canReplace = false
+    showResultPanel()
+    Task { @MainActor [weak self] in
+      let output = await PluginHost.shared.request(pluginID, event: .selection(action.id), input: text)
+      guard let self else { return }
+      self.result.staticText = output?.result?.text ?? "No result — see the plugin's log in Settings › Plugins."
+      self.result.canReplace = output?.result?.replace ?? false
+    }
   }
 
   func runTransform(_ transform: TextTransform) {

@@ -117,7 +117,29 @@ function history(item, cache) {
 
 const text = (t, extra) => Object.assign({ type: "text", text: t }, extra || {})
 
+// "mk <name>": resolve and quote one symbol for the launcher.
+function search() {
+  const input = getenv("ALTOOLS_INPUT").trim()
+  if (!input) return JSON.stringify({ results: [] })
+  const cachePath = dataDir + "/resolved.json"
+  const cache = readJSON(cachePath) || {}
+  const item = resolve(input, cache)
+  writeJSON(cachePath, cache)
+  if (!item) return JSON.stringify({ results: [] })
+  const p = quotes([item])[item.market + ":" + item.code]
+  const name = item.market === "crypto" ? coinName(item.code) : (p && p.name) || item.name
+  return JSON.stringify({ results: [{
+    title: short(item.code) + (p ? "  " + fmt(p.price) : ""),
+    subtitle: [name, badge[item.market], p ? pct(p.change) : (zh ? "暂无报价" : "no quote")].filter(Boolean).join(" · "),
+    symbol: p ? (p.change >= 0 ? "arrow.up.right" : "arrow.down.right") : "questionmark",
+    tint: p ? (p.change >= 0 ? "#98C379" : "#E06C75") : undefined,
+    value: zh ? "打开" : "Open",
+    action: { open: pageURL(item) },
+  }] })
+}
+
 function run() {
+  if (getenv("ALTOOLS_EVENT") === "search") return search()
   const cachePath = dataDir + "/resolved.json"
   const historyPath = dataDir + "/history.json"
   const cache = readJSON(cachePath) || {}
@@ -193,7 +215,10 @@ function run() {
       text(pct(first.price.change), { size: 9, weight: "semibold", mono: true, color: first.color }),
     ] },
   } : undefined
+  const menubarOn = (getenv("ALTOOLS_SETTING_MENUBAR") || "Off") !== "Off"
   return JSON.stringify({
+    menubar: menubarOn && first ? { symbol: short(first.item.code) === "BTC" ? "bitcoinsign.circle" : "chart.line.uptrend.xyaxis",
+      text: (short(first.item.code) === "BTC" ? "" : short(first.item.code) + " ") + fmt(first.price.price) + " " + pct(first.price.change) } : undefined,
     ears,
     home: { view: { type: "vstack", spacing: 5, children: [
       { type: "hstack", spacing: 5, children: [

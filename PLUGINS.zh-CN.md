@@ -2,8 +2,8 @@
 
 [English](PLUGINS.md) · **简体中文**
 
-插件可以把你自己的信息放进 Altools 的刘海：刘海旁边的一个数字、主页上的一个小组件、刘海里属于它自己的标签页，
-以及从刘海弹下来的提醒卡片。插件也可以完全没有界面，只在发生某件事时弹出提醒。一个插件就是一个文件夹，里面有 `plugin.json` 和一个任意语言写的程序。
+插件可以扩展 Altools 的任何地方：刘海（旁边的文字、主页小组件、自己的标签页、提醒卡片）、菜单栏、
+启动器（带快捷键的命令和搜索），以及选中的文字。插件也可以完全没有界面，只在发生某件事时弹出提醒。一个插件就是一个文件夹，里面有 `plugin.json` 和一个任意语言写的程序。
 Altools 定时运行这个程序，程序打印一段 JSON 告诉 Altools 要显示什么。整个 API 就这么多。
 
 你可以手写，也可以把这一页交给 Claude Code 或其他编程 agent 让它来写，或者在
@@ -55,7 +55,10 @@ Altools 定时运行这个程序，程序打印一段 JSON 告诉 Altools 要显
 | `mode` | `interval`（默认）：每 `interval` 秒运行一次。`stream`：启动一次后一直运行，见 [常驻插件](#常驻插件)。 |
 | `interval` | 两次运行之间的秒数，至少 10，默认 300。 |
 | `timeout` | 一次运行最多多少秒，超时就停止，1 到 120，默认 20。 |
-| `slots` | 输出可以出现在哪里：`ears`、`home`、`tab`、`alerts`，默认全部。 |
+| `slots` | 输出可以出现在哪里：`ears`、`home`、`tab`、`alerts`、`menubar`，默认全部。 |
+| `commands` | 启动器命令，每条 `{ "id", "title", "subtitle"?, "icon"?, "keywords"?, "hotkey"? }`，见 [刘海之外](#刘海之外)。 |
+| `selection` | 划词操作，每条 `{ "id", "title", "icon"? }`。 |
+| `search` | `{ "keyword", "placeholder"? }`：以这个关键词开头的启动器输入会交给插件。 |
 | `settings` | 用户在设置里填写的字段：`type` 可以是 `text`、`secret`（存在钥匙串里）、`toggle`（`"1"`/`"0"`）或 `choice`（配合 `options`）。 |
 
 ## 一次运行是怎样的
@@ -65,7 +68,8 @@ Altools 以插件文件夹为工作目录启动程序，环境里带着用户的
 | 变量 | 值 |
 |---|---|
 | `ALTOOLS_API` | `1` |
-| `ALTOOLS_EVENT` | 定时运行时是 `refresh`；用户点了 `run` 动作时是 `action:<id>`；其他程序用 [触发链接](#触发链接) 调用时是 `trigger:<name>` |
+| `ALTOOLS_EVENT` | 定时运行时是 `refresh`；用户点了 `run` 动作时是 `action:<id>`；[触发链接](#触发链接) 是 `trigger:<name>`；还有 `command:<id>`、`selection:<id>`、`search`（见 [刘海之外](#刘海之外)） |
+| `ALTOOLS_INPUT` | 选中的文字（`selection:<id>`）或搜索内容（`search`）；其他情况没有这个变量 |
 | `ALTOOLS_PLUGIN_ID` | 插件 id |
 | `ALTOOLS_PLUGIN_DIR` | 插件文件夹 |
 | `ALTOOLS_DATA_DIR` | 可写的文件夹，放缓存和状态，多次运行之间会保留 |
@@ -156,6 +160,29 @@ Altools 以插件文件夹为工作目录启动程序，环境里带着用户的
 颜色用 `#RRGGBB` 或 `primary`、`secondary`、`tertiary`、`green`、`red`、`orange`、`yellow`、`blue`、`purple`、`cyan`。
 节点树最多 12 层、400 个节点；不认识的类型会被跳过。
 
+## 刘海之外
+
+**菜单栏。** `slots` 里有 `menubar` 时，输出 `"menubar": { "symbol"?, "text"?, "tint"? }`（文字最多 20 个字符）
+就会出现一个菜单栏图标；点开是一个面板，显示插件的 `tab` 页面。
+
+**启动器命令。** `commands` 里的每一条都会出现在 ⌥ Space 启动器里（按标题、`keywords` 和插件名匹配）。
+运行时插件收到 `ALTOOLS_EVENT=command:<id>`。`hotkey` 可以写 `"⌥⇧T"` 或 `"ctrl+option+u"`，在任何地方都能触发；
+被别的 app 占用的组合会被跳过。输出里有 `result` 时，会复制并显示出来：
+
+```json
+{ "result": { "text": "5747fb34-ee34-4438-82c4-0a240b0fc22f", "title": "UUID" } }
+```
+
+**划词。** `selection` 里的每一条会出现在划词工具条的 ⋯ 菜单里。插件以 `ALTOOLS_EVENT=selection:<id>` 运行，
+选中的文字在 `ALTOOLS_INPUT`；`result` 显示在结果面板里，有 **复制**，`"replace": true` 时还有 **替换**。
+
+**启动器搜索。** 写了 `"search": { "keyword": "b64" }` 后，输入 `b64 hello` 会以 `ALTOOLS_EVENT=search`、
+`ALTOOLS_INPUT=hello` 运行插件；它输出的 `"results"`（行）会替换启动器的列表，回车执行这一行的动作（没有动作就复制标题）。
+停止输入四分之一秒后才发请求。
+
+命令、划词和搜索总是单独运行一次，不论哪种 `mode`；这次输出里的其他部分（ears、home……）也会更新显示。
+插件可以只用这些、不写任何刘海 slot，例子见 [`examples/plugins/text-tools`](examples/plugins/text-tools)。
+
 ## 常驻插件
 
 响应事件而不是按时间运行的插件，设置 `"mode": "stream"`。Altools 启动程序一次，然后让它一直运行：
@@ -199,8 +226,8 @@ cat <<EOF
 EOF
 ```
 
-更多例子在 [`examples/plugins`](examples/plugins)：`hello`（行和视图）、滴答清单 / TickTick 任务列表，
-以及 `site-monitor`（没有界面的常驻插件）。内置的行情插件（[`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)）
+更多例子在 [`examples/plugins`](examples/plugins)：`hello`（行和视图）、滴答清单 / TickTick 任务列表、
+`site-monitor`（没有界面的常驻插件），以及 `text-tools`（划词、带快捷键的命令、启动器搜索）。内置的行情插件（[`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)）
 是视图的完整例子。
 
 ## 让 AI agent 来写

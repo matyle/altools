@@ -2,9 +2,9 @@
 
 **English** · [简体中文](PLUGINS.zh-CN.md)
 
-A plugin puts your own information in the Altools notch: a count beside the notch, a widget on Home,
-its own tab in the notch, and alert cards that drop down. It can also have no UI at all and only pop
-alerts when something happens. A plugin is a folder with a
+A plugin extends Altools anywhere: in the notch (text beside it, a widget on Home, its own tab, alert
+cards), in the menu bar, in the launcher (commands with hotkeys, and search), and on selected text.
+It can also have no UI at all and only pop alerts when something happens. A plugin is a folder with a
 `plugin.json` and a program in any language. Altools runs the program on a schedule; the program
 prints JSON saying what to show. That is the whole API.
 
@@ -57,7 +57,10 @@ them on in Settings only if you trust them. Changes to the folder are picked up 
 | `mode` | `interval` (default): run every `interval` seconds. `stream`: started once and kept running; see [Stream plugins](#stream-plugins). |
 | `interval` | Seconds between runs, at least 10. Default 300. |
 | `timeout` | Seconds a run may take before it's stopped, 1 to 120. Default 20. |
-| `slots` | Where output may appear: `ears`, `home`, `tab`, `alerts`. Default all. |
+| `slots` | Where output may appear: `ears`, `home`, `tab`, `alerts`, `menubar`. Default all. |
+| `commands` | Launcher commands, each `{ "id", "title", "subtitle"?, "icon"?, "keywords"?, "hotkey"? }`; see [Beyond the notch](#beyond-the-notch). |
+| `selection` | Selected-text actions, each `{ "id", "title", "icon"? }`. |
+| `search` | `{ "keyword", "placeholder"? }`: launcher queries starting with the keyword go to the plugin. |
 | `settings` | Fields the user fills in under Settings: `type` is `text`, `secret` (kept in the Keychain), `toggle` (`"1"`/`"0"`) or `choice` (with `options`). |
 
 ## How a run works
@@ -68,7 +71,8 @@ user's PATH (including Homebrew) and proxy, plus:
 | Variable | Value |
 |---|---|
 | `ALTOOLS_API` | `1` |
-| `ALTOOLS_EVENT` | `refresh` for a scheduled run, `action:<id>` when the user clicked a `run` action, `trigger:<name>` when another program used a [trigger link](#trigger-links) |
+| `ALTOOLS_EVENT` | `refresh` for a scheduled run, `action:<id>` when the user clicked a `run` action, `trigger:<name>` for a [trigger link](#trigger-links), `command:<id>`, `selection:<id>` or `search` (see [Beyond the notch](#beyond-the-notch)) |
+| `ALTOOLS_INPUT` | The selected text (`selection:<id>`) or the search query (`search`); absent otherwise |
 | `ALTOOLS_PLUGIN_ID` | The plugin id |
 | `ALTOOLS_PLUGIN_DIR` | The plugin folder |
 | `ALTOOLS_DATA_DIR` | A writable folder for caches and state, kept across runs |
@@ -161,6 +165,32 @@ Every node also takes `width`, `height`, `flex` (`true` fills the width), `opaci
 Colours are `#RRGGBB` or `primary`, `secondary`, `tertiary`, `green`, `red`, `orange`, `yellow`,
 `blue`, `purple`, `cyan`. Trees are limited to 12 levels and 400 nodes; unknown types are skipped.
 
+## Beyond the notch
+
+**Menu bar.** With `menubar` in `slots`, output `"menubar": { "symbol"?, "text"?, "tint"? }` (text up
+to 20 characters) to get a menu-bar item; clicking it opens a panel with the plugin's `tab` page.
+
+**Launcher commands.** Each entry in `commands` appears in the ⌥ Space launcher (matched on its title,
+`keywords` and the plugin's name). Running one starts the plugin with `ALTOOLS_EVENT=command:<id>`.
+A `hotkey` such as `"⌥⇧T"` or `"ctrl+option+u"` runs it from anywhere; a combination another app
+already owns is skipped. If the output has a `result`, it's copied and shown:
+
+```json
+{ "result": { "text": "5747fb34-ee34-4438-82c4-0a240b0fc22f", "title": "UUID" } }
+```
+
+**Selected text.** Each entry in `selection` appears in the selection bar's ⋯ menu. The plugin runs
+with `ALTOOLS_EVENT=selection:<id>` and the text in `ALTOOLS_INPUT`; its `result` shows in the result
+panel with **Copy**, and with **Replace** when `"replace": true`.
+
+**Launcher search.** With `"search": { "keyword": "b64" }`, typing `b64 hello` runs the plugin with
+`ALTOOLS_EVENT=search` and `ALTOOLS_INPUT=hello`; its `"results"` (rows) replace the launcher's list,
+and ↩ performs the row's action (or copies its title). Queries wait a quarter second after typing.
+
+Commands, selected-text actions and searches always start a separate run, in either `mode`, and any
+other parts of that output (ears, home, …) update what's shown. A plugin can use only these and list
+no notch slots: see [`examples/plugins/text-tools`](examples/plugins/text-tools).
+
 ## Stream plugins
 
 For plugins that react to events rather than a schedule, set `"mode": "stream"`. Altools starts the
@@ -210,7 +240,8 @@ EOF
 ```
 
 More examples are in [`examples/plugins`](examples/plugins): `hello` (rows and a view), a TickTick /
-滴答清单 task list, and `site-monitor` (a stream plugin with no UI). The built-in Markets plugin
+滴答清单 task list, `site-monitor` (a stream plugin with no UI) and `text-tools` (selected text, a
+command with a hotkey, launcher search). The built-in Markets plugin
 ([`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)) is a full example of views.
 
 ## Writing one with an AI agent

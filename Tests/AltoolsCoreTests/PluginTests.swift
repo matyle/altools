@@ -188,3 +188,37 @@ import Testing
   }
 }
 
+@Suite struct PluginExtensionTests {
+  @Test func manifestDeclaresCommandsSelectionAndSearch() throws {
+    let m = try PluginManifest.decode(Data(##"""
+    {"id": "tt", "run": "x", "slots": ["menubar", "launcher-ish"],
+     "commands": [{"id": "add", "title": "Add task", "icon": "plus", "hotkey": "⌥⇧T"}, {"id": "bad id!", "title": "x"}],
+     "selection": [{"id": "to-task", "title": "Make a task"}],
+     "search": {"keyword": "tt", "placeholder": "Add a task"}}
+    """##.utf8))
+    #expect(m.slots == [.menubar])
+    #expect(m.commands.map(\.id) == ["add"])
+    #expect(m.commands.first?.hotkey == "⌥⇧T")
+    #expect(m.selectionActions.first?.title == "Make a task")
+    #expect(m.search?.keyword == "tt")
+    #expect(try PluginManifest.decode(Data(#"{"id": "a", "run": "x", "search": {"keyword": "two words"}}"#.utf8)).search == nil)
+  }
+
+  @Test func outputCarriesMenuBarResultAndResults() throws {
+    let o = try PluginOutput.decode(Data(#"{"menubar": {"symbol": "bitcoinsign.circle", "text": "60794"}, "result": {"text": "done", "replace": true}, "results": [{"title": "Buy milk"}]}"#.utf8))
+    #expect(o.menubar?.text == "60794")
+    #expect(o.result == PluginOutput.Result(text: "done", replace: true))
+    #expect(o.results.map(\.title) == ["Buy milk"])
+    #expect(try PluginOutput.decode(Data(#"{"result": "plain"}"#.utf8)).result?.text == "plain")
+  }
+
+  @Test func eventsAndInput() throws {
+    #expect(PluginEvent.command("add").value == "command:add")
+    #expect(PluginEvent.selection("fmt").value == "selection:fmt")
+    #expect(PluginEvent.search.value == "search")
+    let m = try PluginManifest.decode(Data(#"{"id": "a", "run": "x"}"#.utf8))
+    let env = PluginEnvironment.variables(manifest: m, pluginDirectory: "/p", dataDirectory: "/d", event: .search, language: "en", settings: [:], input: "milk")
+    #expect(env["ALTOOLS_INPUT"] == "milk")
+  }
+}
+

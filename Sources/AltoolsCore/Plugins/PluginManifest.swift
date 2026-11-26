@@ -32,6 +32,12 @@ public struct PluginManifest: Equatable, Sendable {
   public var timeout: TimeInterval
   public var slots: Set<PluginSlot>
   public var settings: [PluginSetting]
+  /// Launcher commands (each may have a global hotkey); run with `ALTOOLS_EVENT=command:<id>`.
+  public var commands: [PluginCommand]
+  /// Actions in the selected-text bar; run with `ALTOOLS_EVENT=selection:<id>` and the text in `ALTOOLS_INPUT`.
+  public var selectionActions: [PluginCommand]
+  /// Launcher queries starting with this keyword go to the plugin (`ALTOOLS_EVENT=search`).
+  public var search: PluginSearch?
 
   public static func decode(_ data: Data) throws -> PluginManifest {
     let raw: Raw
@@ -62,12 +68,19 @@ public struct PluginManifest: Equatable, Sendable {
       interval: max(minimumInterval, raw.interval ?? defaultInterval),
       timeout: min(maximumTimeout, max(1, raw.timeout ?? defaultTimeout)),
       slots: slots,
-      settings: (raw.settings ?? []).filter { isValidSettingKey($0.key) }
+      settings: (raw.settings ?? []).filter { isValidSettingKey($0.key) },
+      commands: (raw.commands ?? []).filter { isValidActionID($0.id) },
+      selectionActions: (raw.selection ?? []).filter { isValidActionID($0.id) },
+      search: raw.search.flatMap { $0.keyword.isEmpty || $0.keyword.contains(" ") ? nil : $0 }
     )
   }
 
   public static func isValidID(_ id: String) -> Bool {
     !id.isEmpty && id.count <= 64 && id.unicodeScalars.allSatisfy { ("a"..."z").contains($0) || ("0"..."9").contains($0) || $0 == "-" }
+  }
+
+  static func isValidActionID(_ id: String) -> Bool {
+    !id.isEmpty && id.count <= 64 && id.unicodeScalars.allSatisfy { CharacterSet.alphanumerics.contains($0) || "-_.:".unicodeScalars.contains($0) }
   }
 
   static func isValidSettingKey(_ key: String) -> Bool {
@@ -98,6 +111,9 @@ public struct PluginManifest: Equatable, Sendable {
     var timeout: TimeInterval?
     var slots: [String]?
     var settings: [PluginSetting]?
+    var commands: [PluginCommand]?
+    var selection: [PluginCommand]?
+    var search: PluginSearch?
   }
 }
 
@@ -112,6 +128,39 @@ public enum PluginSlot: String, CaseIterable, Sendable {
   case tab
   /// Cards that drop from the notch once per alert id.
   case alerts
+  /// A menu-bar item (icon and/or short text) whose panel shows the plugin's page.
+  case menubar
+}
+
+/// A launcher command or a selected-text action a plugin declares.
+public struct PluginCommand: Decodable, Equatable, Sendable {
+  public var id: String
+  public var title: String
+  public var subtitle: String?
+  /// SF Symbol name.
+  public var icon: String?
+  /// Extra words the launcher matches, space separated.
+  public var keywords: String?
+  /// A global shortcut such as "⌥⇧T" or "option+shift+t"; launcher commands only.
+  public var hotkey: String?
+
+  enum CodingKeys: String, CodingKey { case id, title, subtitle, icon, keywords, hotkey }
+
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    id = try c.decode(String.self, forKey: .id)
+    title = (try? c.decode(String.self, forKey: .title)) ?? id
+    subtitle = try? c.decode(String.self, forKey: .subtitle)
+    icon = try? c.decode(String.self, forKey: .icon)
+    keywords = try? c.decode(String.self, forKey: .keywords)
+    hotkey = try? c.decode(String.self, forKey: .hotkey)
+  }
+}
+
+/// A launcher search provider: typing "<keyword> <text>" sends <text> to the plugin.
+public struct PluginSearch: Decodable, Equatable, Sendable {
+  public var keyword: String
+  public var placeholder: String?
 }
 
 /// One field the user fills in under Settings; the value reaches the script as

@@ -149,6 +149,10 @@ final class LauncherModel: ObservableObject {
     var result: [LauncherItem] = []
 
     let settings = AppSettings.shared
+    // "<keyword> <text>" belongs to the plugin with that search keyword.
+    if settings.pluginsEnabled, let match = PluginHost.shared.searchProvider(for: q) {
+      return pluginSearchItems(match.plugin, input: match.input)
+    }
     if settings.isOn("launcher.calc"), Calculator.looksLikeExpression(q), let value = Calculator.evaluate(q) {
       let text = Calculator.format(value)
       result.append(LauncherItem(id: "calc", section: "Calculator", title: text, subtitle: q,
@@ -200,6 +204,64 @@ final class LauncherModel: ObservableObject {
       self?.dismiss()
     })
     return result
+  }
+
+  // MARK: Plugin search
+
+  /// Answers already fetched, by "plugin|input"; the newest 50 are kept.
+  private var pluginResults: [String: [PluginOutput.Row]] = [:]
+  private var pluginResultOrder: [String] = []
+  private var pluginSearch: (key: String, task: Task<Void, Never>)?
+
+  private func pluginSearchItems(_ plugin: PluginHost.Plugin, input: String) -> [LauncherItem] {
+    let key = plugin.id + "|" + input
+    let tint = Color(pluginHex: plugin.manifest?.tint) ?? .orange
+    let icon = plugin.manifest?.icon ?? "puzzlepiece.extension.fill"
+    guard let rows = pluginResults[key] else {
+      startPluginSearch(plugin, input: input, key: key)
+      let waiting = input.isEmpty ? (plugin.manifest?.search?.placeholder ?? "Type to search \(plugin.name)") : "Searching \(plugin.name)…"
+      return [LauncherItem(id: "plugin-search-wait", section: plugin.name, title: waiting, icon: .symbol(icon, tint), actionName: "") {}]
+    }
+    if rows.isEmpty {
+      return [LauncherItem(id: "plugin-search-none", section: plugin.name, title: "No results", subtitle: input, icon: .symbol(icon, tint), actionName: "") {}]
+    }
+    return rows.enumerated().map { index, row in
+      let actionName: String = switch row.action {
+      case .open: "Open"
+      case .copy, nil: "Copy"
+      case .run: "Run"
+      }
+      return LauncherItem(id: "plugin-\(key)-\(index)", section: plugin.name, title: row.title, subtitle: row.subtitle ?? "",
+                          icon: .symbol(row.symbol ?? icon, Color(pluginHex: row.tint) ?? tint), actionName: actionName,
+                          accessory: row.value ?? "") { [weak self] in
+        if let action = row.action {
+          PluginHost.shared.perform(action, plugin: plugin.id)
+        } else {
+          Pasteboard.copy(row.title)
+          Toast.show("Copied")
+        }
+        self?.dismiss()
+      }
+    }
+  }
+
+  /// Asks the plugin a quarter second after typing stops; the newest query wins.
+  private func startPluginSearch(_ plugin: PluginHost.Plugin, input: String, key: String) {
+    guard pluginSearch?.key != key else { return }
+    pluginSearch?.task.cancel()
+    let id = plugin.id
+    let task = Task { @MainActor [weak self] in
+      try? await Task.sleep(nanoseconds: 250_000_000)
+      guard !Task.isCancelled else { return }
+      let output = await PluginHost.shared.request(id, event: .search, input: input)
+      guard let self, !Task.isCancelled else { return }
+      self.pluginResults[key] = output?.results ?? []
+      self.pluginResultOrder.append(key)
+      if self.pluginResultOrder.count > 50 { self.pluginResults[self.pluginResultOrder.removeFirst()] = nil }
+      self.pluginSearch = nil
+      if self.mode == .search { self.rebuild() }
+    }
+    pluginSearch = (key, task)
   }
 
   /// Commands also match on their keywords ("screenshot" finds Capture Area), ranked below title matches.

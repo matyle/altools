@@ -26,6 +26,8 @@ final class AppSettings: ObservableObject {
   @Published var notchAllDisplays: Bool { didSet { save(notchAllDisplays, "notchAllDisplays") } }
   @Published var launcherEnabled: Bool { didSet { save(launcherEnabled, "launcherEnabled") } }
   @Published var widgetsEnabled: Bool { didSet { save(widgetsEnabled, "widgetsEnabled") } }
+  /// Plugins anywhere in Altools: notch, menu bar, launcher, selected text, hotkeys.
+  @Published var pluginsEnabled: Bool { didSet { save(pluginsEnabled, "pluginsEnabled") } }
   @Published var selectionEnabled: Bool { didSet { save(selectionEnabled, "selectionEnabled") } }
   @Published var captureEnabled: Bool { didSet { save(captureEnabled, "captureEnabled") } }
   /// Capability keys ("notch.volume", "launcher.web", …) the user switched off; everything else is on.
@@ -85,6 +87,9 @@ final class AppSettings: ObservableObject {
     notchHoverDelay = defaults.object(forKey: "notchHoverDelay") as? Double ?? 0.2
     launcherEnabled = defaults.object(forKey: "launcherEnabled") as? Bool ?? true
     widgetsEnabled = defaults.object(forKey: "widgetsEnabled") as? Bool ?? true
+    // Plugins used to be a notch capability ("notch.plugins"); its off switch carries over.
+    pluginsEnabled = defaults.object(forKey: "pluginsEnabled") as? Bool
+      ?? !(defaults.stringArray(forKey: "disabledCapabilities") ?? []).contains("notch.plugins")
     selectionEnabled = defaults.object(forKey: "selectionEnabled") as? Bool ?? true
     captureEnabled = defaults.object(forKey: "captureEnabled") as? Bool ?? true
     disabledCapabilities = Set(defaults.stringArray(forKey: "disabledCapabilities") ?? [])

@@ -9,13 +9,49 @@ public struct PluginOutput: Equatable, Sendable {
   public var alerts: [Alert]
   /// Seconds until the next refresh, overriding the manifest's interval once.
   public var next: TimeInterval?
+  /// The plugin's menu-bar item.
+  public var menubar: MenuBarItem?
+  /// The answer to a command or selected-text action.
+  public var result: Result?
+  /// Launcher rows answering a search.
+  public var results: [Row]
 
-  public init(ears: Ears? = nil, home: Card? = nil, tab: Page? = nil, alerts: [Alert] = [], next: TimeInterval? = nil) {
+  public init(ears: Ears? = nil, home: Card? = nil, tab: Page? = nil, alerts: [Alert] = [], next: TimeInterval? = nil,
+              menubar: MenuBarItem? = nil, result: Result? = nil, results: [Row] = []) {
     self.ears = ears
     self.home = home
     self.tab = tab
     self.alerts = alerts
     self.next = next
+    self.menubar = menubar
+    self.result = result
+    self.results = results
+  }
+
+  public struct MenuBarItem: Equatable, Sendable {
+    public var symbol: String?
+    /// Short text beside the symbol, cut to 20 characters.
+    public var text: String?
+    public var tint: String?
+
+    public init(symbol: String? = nil, text: String? = nil, tint: String? = nil) {
+      self.symbol = symbol
+      self.text = text
+      self.tint = tint
+    }
+  }
+
+  public struct Result: Equatable, Sendable {
+    public var text: String
+    public var title: String?
+    /// For a selected-text action: offer to replace the selection with `text`.
+    public var replace: Bool
+
+    public init(text: String, title: String? = nil, replace: Bool = false) {
+      self.text = text
+      self.title = title
+      self.replace = replace
+    }
   }
 
   /// The two sides of the notch. Either the simple form (`symbol` on the left, `text` on the right)
@@ -136,7 +172,10 @@ public struct PluginOutput: Equatable, Sendable {
       home: (object["home"] as? [String: Any]).map(card),
       tab: (object["tab"] as? [String: Any]).map(page),
       alerts: (object["alerts"] as? [[String: Any]] ?? []).compactMap(alert),
-      next: number(object["next"]).map { max(PluginManifest.minimumInterval, $0) }
+      next: number(object["next"]).map { max(PluginManifest.minimumInterval, $0) },
+      menubar: (object["menubar"] as? [String: Any]).flatMap(menubar),
+      result: result(object["result"]),
+      results: rows(object["results"])
     )
   }
 
@@ -146,6 +185,19 @@ public struct PluginOutput: Equatable, Sendable {
     guard text != nil || left != nil || right != nil else { return nil }
     return Ears(symbol: string(o["symbol"]), text: text, tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex),
                 left: left, right: right, width: number(o["width"]).map { min(max($0, 30), 140) })
+  }
+
+  private static func menubar(_ o: [String: Any]) -> MenuBarItem? {
+    let symbol = string(o["symbol"]), text = string(o["text"]).map { String($0.prefix(20)) }
+    guard symbol != nil || text != nil else { return nil }
+    return MenuBarItem(symbol: symbol, text: text, tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex))
+  }
+
+  /// `"result": "text"` or `{"text", "title", "replace"}`.
+  private static func result(_ value: Any?) -> Result? {
+    if let text = string(value) { return Result(text: text) }
+    guard let o = value as? [String: Any], let text = o["text"] as? String else { return nil }
+    return Result(text: text, title: string(o["title"]), replace: (o["replace"] as? Bool) ?? false)
   }
 
   private static func card(_ o: [String: Any]) -> Card {
@@ -235,12 +287,21 @@ public enum PluginEvent: Equatable, Sendable {
   case action(String)
   /// Another program opened `altools://plugin/<id>/run?event=<name>`.
   case trigger(String)
+  /// A launcher command or its hotkey.
+  case command(String)
+  /// A selected-text action; the text is in `ALTOOLS_INPUT`.
+  case selection(String)
+  /// A launcher query for the plugin's search keyword; the query is in `ALTOOLS_INPUT`.
+  case search
 
   public var value: String {
     switch self {
     case .refresh: "refresh"
     case .action(let id): "action:\(id)"
     case .trigger(let name): "trigger:\(name)"
+    case .command(let id): "command:\(id)"
+    case .selection(let id): "selection:\(id)"
+    case .search: "search"
     }
   }
 }
@@ -248,7 +309,7 @@ public enum PluginEvent: Equatable, Sendable {
 /// The environment a plugin run gets on top of the user's PATH and proxy.
 public enum PluginEnvironment {
   public static func variables(manifest: PluginManifest, pluginDirectory: String, dataDirectory: String,
-                               event: PluginEvent, language: String, settings: [String: String]) -> [String: String] {
+                               event: PluginEvent, language: String, settings: [String: String], input: String? = nil) -> [String: String] {
     var env = [
       "ALTOOLS_API": String(PluginManifest.apiVersion),
       "ALTOOLS_EVENT": event.value,
@@ -260,6 +321,7 @@ public enum PluginEnvironment {
     for setting in manifest.settings {
       env[setting.environmentName] = settings[setting.key] ?? setting.defaultValue ?? ""
     }
+    if let input { env["ALTOOLS_INPUT"] = input }
     return env
   }
 }

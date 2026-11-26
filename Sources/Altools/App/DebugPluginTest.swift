@@ -64,6 +64,21 @@ enum DebugPluginTest {
         print("PLUGIN \(plugin.id): error=\(plugin.error ?? "-") ears=\(o?.ears?.text ?? "-") home=\(o?.home?.rows.map(\.title) ?? []) tabSections=\(o?.tab?.sections.count ?? 0)")
       }
       print("ALERTS \(alerts)")
+      host.setValue("First symbol", of: host.plugins.first { $0.id == "markets" }!.manifest!.settings.first { $0.key == "menubar" }!, for: "markets")
+      host.refresh("markets")
+      Task { @MainActor in
+        let command = await host.request("text-tools", event: .command("uuid"))
+        let selection = await host.request("text-tools", event: .selection("json"), input: #"{"a":1}"#)
+        let search = await host.request("text-tools", event: .search, input: "aGVsbG8=")
+        let quote = await host.request("markets", event: .search, input: "腾讯")
+        print("COMMAND result=\(command?.result?.text.count ?? 0) chars")
+        print("SELECTION replace=\(selection?.result?.replace ?? false) text=\(selection?.result?.text.replacingOccurrences(of: "\n", with: " ") ?? "-")")
+        print("SEARCH b64=\(search?.results.map(\.title) ?? []) mk=\(quote?.results.map(\.title) ?? [])")
+        let match = host.searchProvider(for: "b64 hello")
+        print("PROVIDER \(match?.plugin.id ?? "-") input=\(match?.input ?? "-")")
+        let keys = ["⌥⇧T", "ctrl+option+u", "cmd+k", "T", "hyper+x"].map { HotKeyCenter.parse($0, title: "t")?.display ?? "nil" }
+        print("HOTKEYS \(keys)")
+      }
       host.perform(.run("greet"), plugin: "hello")
       host.perform(.run("ping"), plugin: "test-stream")
       _ = PluginPackage.handle(URL(string: "altools://plugin/test-trigger/run?event=deploy")!)
@@ -75,6 +90,7 @@ enum DebugPluginTest {
       let model = NotchModel()
       print("TABS \(model.pluginTabs.map(\.id))")
       print("HELLO view=\(host.plugins.first { $0.id == "hello" }?.output?.home?.view != nil)")
+      print("MENUBAR markets=\(host.plugins.first { $0.id == "markets" }?.output?.menubar?.text ?? "-")")
       let settings = AppSettings.shared
       let savedSlots = settings.homeCards
       settings.homeSlotList = [.builtin(.media), .plugin("markets"), .plugin("hello")]
@@ -94,7 +110,7 @@ enum DebugPluginTest {
         ("plugin-alert", CGSize(width: 680, height: 140), notch {
           $0.card = .plugin(id: "hello", alert: PluginOutput.Alert(id: "x", title: "Hello from a plugin", body: "Shown once a day. Edit run.sh to change me.", symbol: nil, tint: nil, action: nil))
         }),
-        ("plugin-settings", CGSize(width: 1100, height: 900), { AnyView(SettingsRoot(actions: SettingsActions(), page: .module("notch"))) }),
+        ("plugin-settings", CGSize(width: 1100, height: 900), { AnyView(SettingsRoot(actions: SettingsActions(), page: .module("plugins"))) }),
         // Last: hello and ticktick off so the Markets ears show.
         ("plugin-ears", CGSize(width: 680, height: 80), notch { _ in for id in ["hello", "ticktick"] { PluginHost.shared.setEnabled(id, false) } }),
       ]

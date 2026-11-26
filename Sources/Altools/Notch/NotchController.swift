@@ -132,7 +132,7 @@ final class NotchModel: ObservableObject {
     if on("notch.sensors"), signals.sensors.active { return .sensors(signals.sensors) }
     if center.aiRunning > 0 { return .ai }
     if on("notch.nowplaying"), nowPlaying.track?.isPlaying == true { return .music }
-    if on("notch.plugins"), let plugin = plugins.plugins.first(where: { $0.shows(.ears) && $0.output?.ears != nil }),
+    if AppSettings.shared.pluginsEnabled, let plugin = plugins.plugins.first(where: { $0.shows(.ears) && $0.output?.ears != nil }),
        let ears = plugin.output?.ears {
       return .plugin(id: plugin.id, ears: ears)
     }
@@ -154,7 +154,7 @@ final class NotchModel: ObservableObject {
 
   /// Enabled plugins with a page, each shown as its own tab after the built-in ones.
   var pluginTabs: [PluginHost.Plugin] {
-    guard AppSettings.shared.isOn("notch.plugins") else { return [] }
+    guard AppSettings.shared.pluginsEnabled else { return [] }
     return plugins.plugins.filter { $0.shows(.tab) }
   }
 
@@ -268,11 +268,6 @@ final class NotchController {
     volume.start()
     notifications.onBanner = { [weak self] banner in self?.receive(banner) }
     model.plugins.onAlert = { [weak self] alert, plugin in self?.showCard(.plugin(id: plugin.id, alert: alert), for: 8) }
-    if on("notch.plugins") { model.plugins.start() }
-    AppSettings.shared.$disabledCapabilities.map { !$0.contains("notch.plugins") }.removeDuplicates().dropFirst()
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] on in on ? self?.model.plugins.start() : self?.model.plugins.stop() }
-      .store(in: &cancellables)
     model.agents.onNew = { [weak self] item in self?.showCard(.agent(item), for: 12) }
     if on("notch.agents") { model.agents.start() }
     AppSettings.shared.$disabledCapabilities.map { !$0.contains("notch.agents") }.removeDuplicates().dropFirst()
@@ -356,7 +351,6 @@ final class NotchController {
     cancellables = []
     model.nowPlaying.stop()
     model.agents.stop()
-    model.plugins.stop()
     model.signals.stop()
     volume.stop()
     spacer.stop()

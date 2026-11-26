@@ -191,6 +191,17 @@ enum SettingsCatalog {
                            }
                          })),
         ]),
+      ModuleSpec(
+        id: "plugins", name: "Plugins", symbol: "puzzlepiece.extension.fill", tint: Theme.accent,
+        tagline: "Extend Altools with scripts in any language: the notch, the menu bar, the launcher, selected text and hotkeys",
+        flow: "A folder with plugin.json and a script → it prints JSON → Altools shows it where the plugin asks",
+        enabled: bind(\.pluginsEnabled),
+        capabilities: [
+          CapabilitySpec(key: "installed", title: "Plugins",
+                         detail: "Make one with AI, browse the store, import a .altoolsplugin, and switch each plugin on. A plugin can put a widget on Home, its own notch tab, text beside the notch, alert cards, a menu-bar item, launcher commands and search, actions on selected text, and hotkeys.",
+                         value: "\(PluginHost.shared.plugins.filter(\.enabled).count) on",
+                         settings: AnyView(PluginSettingsView())),
+        ]),
     ]
     for index in modules.indices {
       for c in modules[index].capabilities.indices { modules[index].capabilities[c].moduleID = modules[index].id }
@@ -235,10 +246,6 @@ enum SettingsCatalog {
                      detail: "Pick the cards on the notch's Home tab and their order, and the buttons along the bottom.",
                      value: "\(settings.homeCards.count) cards · \(settings.homeActions.count) buttons",
                      settings: AnyView(HomeLayoutEditor())),
-      CapabilitySpec(key: "plugins", title: "Plugins",
-                     detail: "Add your own information to the notch: a count beside it, a Home card, a page under the Plugins tab and alert cards. A plugin is a folder with plugin.json and a script in any language; make one with AI below or read PLUGINS.md.",
-                     toggle: cap("notch.plugins"), value: "\(PluginHost.shared.plugins.filter(\.enabled).count) on",
-                     settings: AnyView(PluginSettingsView())),
       CapabilitySpec(key: "agents", title: "Agents waiting in tuios",
                      detail: "When an agent in a tuios pane asks for approval, a plan review or an answer, stops with an error, or finishes its turn, a card drops down; click it to jump to the pane. Until you look, Home shows the first one in place of the quick actions.",
                      toggle: cap("notch.agents")),

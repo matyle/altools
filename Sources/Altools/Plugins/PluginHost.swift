@@ -232,13 +232,13 @@ final class PluginHost: ObservableObject {
     }
   }
 
-  private func environment(for plugin: Plugin, manifest: PluginManifest, event: PluginEvent) -> [String: String] {
+  private func environment(for plugin: Plugin, manifest: PluginManifest, event: PluginEvent, input: String? = nil) -> [String: String] {
     let values = Dictionary(uniqueKeysWithValues: manifest.settings.map { ($0.key, value(of: $0, for: plugin.id)) })
     let dataDirectory = AppPaths.subdirectory("PluginData").appendingPathComponent(plugin.id, isDirectory: true)
     try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
     var env = CLILocator.environment(proxy: AppSettings.shared.proxy)
     env.merge(PluginEnvironment.variables(manifest: manifest, pluginDirectory: plugin.folder.path, dataDirectory: dataDirectory.path,
-                                          event: event, language: Self.language, settings: values)) { _, new in new }
+                                          event: event, language: Self.language, settings: values, input: input)) { _, new in new }
     return env
   }
 
@@ -309,20 +309,65 @@ final class PluginHost: ObservableObject {
       return
     }
     do {
-      let next = try PluginOutput.decode(Data(trimmed.utf8))
-      update(id) { p in
-        var merged = p.output ?? PluginOutput()
-        if next.ears != nil { merged.ears = next.ears }
-        if next.home != nil { merged.home = next.home }
-        if next.tab != nil { merged.tab = next.tab }
-        p.output = merged
-        p.lastRun = Date()
-        p.runError = nil
-      }
-      if let plugin = plugins.first(where: { $0.id == id }), plugin.shows(.alerts) { announce(next.alerts, from: plugin) }
+      merge(try PluginOutput.decode(Data(trimmed.utf8)), into: id)
     } catch let error as PluginOutputError {
       update(id) { $0.runError = error.description }
     } catch {}
+  }
+
+  /// Applies the parts an output carries, keeping the rest of what's shown, and announces its alerts.
+  private func merge(_ next: PluginOutput, into id: String) {
+    update(id) { p in
+      var merged = p.output ?? PluginOutput()
+      if next.ears != nil { merged.ears = next.ears }
+      if next.home != nil { merged.home = next.home }
+      if next.tab != nil { merged.tab = next.tab }
+      if next.menubar != nil { merged.menubar = next.menubar }
+      p.output = merged
+      p.lastRun = Date()
+      p.runError = nil
+    }
+    if let plugin = plugins.first(where: { $0.id == id }), plugin.shows(.alerts) { announce(next.alerts, from: plugin) }
+  }
+
+  // MARK: Requests
+
+  /// Runs the plugin once for an answer (a command, a selected-text action, a search), in either
+  /// mode, and returns its output; parts other than the answer update what's shown. Nil when the
+  /// run fails; the reason goes to the plugin's log.
+  @MainActor
+  func request(_ id: String, event: PluginEvent, input: String? = nil) async -> PluginOutput? {
+    guard let plugin = plugins.first(where: { $0.id == id }), plugin.enabled, plugin.problem == nil, let manifest = plugin.manifest else { return nil }
+    let env = environment(for: plugin, manifest: manifest, event: event, input: input)
+    let executable = plugin.folder.appendingPathComponent(manifest.run)
+    let folder = plugin.folder
+    let result = await Task.detached { Self.execute(executable, directory: folder, environment: env, timeout: manifest.timeout) }.value
+    let stamp = Date().formatted(date: .omitted, time: .standard)
+    var problem: String?
+    var output: PluginOutput?
+    if let launchError = result.launchError {
+      problem = launchError
+    } else if result.timedOut {
+      problem = "stopped after \(Int(manifest.timeout)) s without finishing"
+    } else if result.status != 0 {
+      problem = "exited with status \(result.status)" + (result.stderr.isEmpty ? "" : ": " + Self.lastLine(result.stderr))
+    } else {
+      do { output = try PluginOutput.decode(result.stdout) } catch let error as PluginOutputError { problem = error.description } catch {}
+    }
+    appendLog("[\(stamp)] \(event.value): \(problem ?? "ok")\n" + result.stderr, plugin: id)
+    if let output { merge(output, into: id) }
+    return output
+  }
+
+  /// The plugin whose search keyword starts `query` ("tt buy milk" → the "tt" plugin, "buy milk").
+  func searchProvider(for query: String) -> (plugin: Plugin, input: String)? {
+    let trimmed = query.trimmingCharacters(in: .whitespaces)
+    for plugin in plugins where plugin.enabled && plugin.problem == nil {
+      guard let keyword = plugin.manifest?.search?.keyword else { continue }
+      if trimmed.lowercased() == keyword.lowercased() { return (plugin, "") }
+      if trimmed.lowercased().hasPrefix(keyword.lowercased() + " ") { return (plugin, String(trimmed.dropFirst(keyword.count + 1))) }
+    }
+    return nil
   }
 
   /// A stream that exits is restarted after 5 s, doubling up to 5 minutes; one that ran for a

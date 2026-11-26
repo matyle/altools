@@ -159,8 +159,13 @@ private struct PluginCard: View {
   }
 
   private var slots: String {
-    let names: [PluginSlot: String] = [.ears: "the ears", .home: "Home", .tab: "the Plugins tab", .alerts: "alerts"]
-    return PluginSlot.allCases.filter { plugin.manifest?.slots.contains($0) == true }.compactMap { names[$0] }.joined(separator: ", ")
+    guard let manifest = plugin.manifest else { return "" }
+    let names: [PluginSlot: String] = [.ears: "beside the notch", .home: "Home", .tab: "its own notch tab", .alerts: "alerts", .menubar: "the menu bar"]
+    var places = PluginSlot.allCases.filter(manifest.slots.contains).compactMap { names[$0] }
+    if !manifest.commands.isEmpty { places.append(manifest.commands.contains { $0.hotkey != nil } ? "launcher commands and hotkeys" : "launcher commands") }
+    if let keyword = manifest.search?.keyword { places.append("launcher search “\(keyword) …”") }
+    if !manifest.selectionActions.isEmpty { places.append("selected text") }
+    return places.isEmpty ? "nothing visible" : places.joined(separator: ", ")
   }
 
   @ViewBuilder private func field(for setting: PluginSetting) -> some View {
