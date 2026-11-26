@@ -152,6 +152,33 @@ EOF
 
 然后在 设置 › 刘海 › 插件 里打开它。
 
+## 分享和发布
+
+**文件。** 设置 › 刘海 › 插件 › **导出…** 会把插件存成 `<id>.altoolsplugin`（就是压缩后的文件夹）。
+别人装了 Altools 后，双击它、拖到 Altools 上，或者用 **导入…** 都可以安装；Altools 会先显示名字、作者和显示位置，
+确认后才安装。
+
+**链接。** 把插件放进一个 GitHub 仓库，然后分享：
+
+```
+altools://install-plugin?repo=you/your-plugin
+altools://install-plugin?repo=you/plugins&path=weather&ref=v1.2
+```
+
+`path` 指向子文件夹里的插件，`ref` 指定分支或标签（默认是默认分支）。`url=https://…` 可以安装任何包含插件的 zip。
+在设置里的 **从 GitHub 安装** 粘贴 `you/your-plugin` 或 GitHub 链接，效果一样。
+
+**插件商店。** 设置 › 刘海 › 插件 › **插件商店** 会列出：
+
+- 所有带 **`altools-plugin`** 话题（topic）、根目录有 `plugin.json` 的公开 GitHub 仓库。
+  发布方法：推送插件，再给仓库加上这个话题（仓库 › About › ⚙ › Topics）。按 star 数排序。
+  更新就是再推送一次；`version` 变了，用户会看到 **更新**。
+- 本仓库 [`plugins/registry.json`](plugins/registry.json) 里的 **精选** 插件。想被精选，按本页检查过后，
+  提一个 PR 加上 `{ "repo": "you/your-plugin" }`（子文件夹再加 `"path"`，固定分支或标签加 `"ref"`）。
+
+商店直接从 GitHub 读取 `plugin.json`，所以请填好 `name`、`description`、`author`、`icon` 和 `version`。
+商店里的插件依然是以用户身份运行的程序：保持代码易读，不要在运行时再下载代码来执行。
+
 ## 建议
 
 - 每次运行尽量快；慢的 API 请求缓存到 `$ALTOOLS_DATA_DIR`。

@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     if DebugRender.runIfRequested() { return }
     if DebugSelfTest.runIfRequested() { return }
     if DebugPluginTest.runIfRequested() { return }
+    if DebugPluginShareTest.runIfRequested() { return }
     #endif
     launcher = LauncherController(commands: { [weak self] in self?.launcherCommands() ?? [] })
     selection.askAI = { [weak self] text in
@@ -166,6 +167,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// `altools://selftest` runs the live desktop self-test (see LiveSelfTest).
   func application(_ application: NSApplication, open urls: [URL]) {
+    // A double-clicked .altoolsplugin, or an altools://install-plugin link.
+    var handled = false
+    for url in urls {
+      if url.isFileURL, url.pathExtension == PluginPackage.fileExtension {
+        PluginPackage.install(from: url, source: url.lastPathComponent)
+        handled = true
+      } else if PluginPackage.handle(url) {
+        handled = true
+      }
+    }
+    if handled { return }
     if urls.contains(where: { $0.host == "dump-notifications" }) {
       // Waits for a banner to be on screen, then writes its accessibility tree for inspection.
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {

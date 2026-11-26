@@ -22,6 +22,7 @@ cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 cp "$root/PLUGINS.md" "$app/Contents/Resources/PLUGINS.md"
 cp -R "$root/examples/plugins" "$app/Contents/Resources/PluginExamples"
 cp -R "$root/Resources/BuiltinPlugins" "$app/Contents/Resources/BuiltinPlugins"
+cp "$root/plugins/registry.json" "$app/Contents/Resources/registry.json"
 
 # System Now Playing bridge, loaded into /usr/bin/perl at runtime (see NowPlaying.swift).
 mkdir -p "$app/Contents/Frameworks"

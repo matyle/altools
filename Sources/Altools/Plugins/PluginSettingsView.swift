@@ -12,6 +12,7 @@ struct PluginSettingsView: View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
         Button("Open Plugins folder") { NSWorkspace.shared.open(PluginHost.folder) }
+        Button("Import…") { PluginPackage.importWithPanel() }
         Button("Install examples") { installExamples() }
         Button("Plugin guide") { NSWorkspace.shared.open(URL(string: "https://github.com/matyle/altools/blob/main/PLUGINS.md")!) }
         Button("Reload") { host.reload() }
@@ -19,6 +20,8 @@ struct PluginSettingsView: View {
       .buttonStyle(SoftPillButtonStyle())
 
       makerCard
+
+      PluginStoreView()
 
       if host.plugins.isEmpty {
         Text("No plugins yet. Make one above, install the examples, or drop a plugin folder into the Plugins folder.")
@@ -119,6 +122,7 @@ private struct PluginCard: View {
       HStack(spacing: 8) {
         Button("Run now") { host.refresh(plugin.id) }.disabled(!plugin.enabled || plugin.running)
         Button(showLog ? "Hide log" : "Log") { showLog.toggle() }
+        Button("Export…") { PluginPackage.export(plugin) }
         Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([plugin.folder]) }
         if plugin.error != nil, plugin.manifest != nil {
           Button("Fix with AI", action: fix).disabled(fixing)
@@ -184,5 +188,93 @@ private struct PluginCard: View {
   private func remove() {
     host.setEnabled(plugin.id, false)
     NSWorkspace.shared.recycle([plugin.folder]) { _, _ in DispatchQueue.main.async { host.reload() } }
+  }
+}
+
+/// Browse and install plugins from GitHub: featured ones first, then community repositories
+/// tagged `altools-plugin`.
+struct PluginStoreView: View {
+  @StateObject private var store = PluginStore()
+  @ObservedObject private var host = PluginHost.shared
+  @State private var query = ""
+  @State private var repo = ""
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Text("Plugin store").font(.system(size: 13, weight: .semibold))
+        Spacer()
+        if store.isLoading { ProgressView().controlSize(.small) }
+        Button("Refresh") { store.load() }.buttonStyle(SoftPillButtonStyle()).disabled(store.isLoading)
+      }
+      Text("Featured plugins and any GitHub repository tagged “\(PluginStore.topic)”. Publishing yours: see PLUGINS.md › Publish.")
+        .font(.system(size: 11.5)).foregroundStyle(Theme.dim)
+      HStack(spacing: 8) {
+        TextField("Search", text: $query).textFieldStyle(.plain)
+          .padding(.horizontal, 10).frame(height: 28)
+          .background(Theme.card, in: RoundedRectangle(cornerRadius: 7))
+          .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.cardBorder))
+        TextField("Install from GitHub: owner/repo or a link", text: $repo).textFieldStyle(.plain)
+          .padding(.horizontal, 10).frame(height: 28)
+          .background(Theme.card, in: RoundedRectangle(cornerRadius: 7))
+          .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.cardBorder))
+          .onSubmit { install() }
+        Button("Install") { install() }.buttonStyle(SoftPillButtonStyle()).disabled(repo.trimmingCharacters(in: .whitespaces).isEmpty)
+      }
+      if let problem = store.problem {
+        Text(problem).font(.system(size: 11)).foregroundStyle(Theme.warning)
+      }
+      ForEach(filtered) { listing in row(listing) }
+      if !store.isLoading, filtered.isEmpty {
+        Text(store.listings.isEmpty ? "Nothing listed yet." : "No plugins match “\(query)”.").font(.system(size: 11.5)).foregroundStyle(Theme.faint)
+      }
+    }
+    .padding(14)
+    .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
+    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.cardBorder))
+    .onAppear { if store.listings.isEmpty { store.load() } }
+  }
+
+  private var filtered: [PluginStore.Listing] {
+    let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+    guard !q.isEmpty else { return store.listings }
+    return store.listings.filter { l in
+      [l.manifest.name, l.manifest.summary ?? "", l.manifest.author ?? "", l.repo].contains { $0.lowercased().contains(q) }
+    }
+  }
+
+  private func install() {
+    PluginStore.installFromGitHub(repo)
+    repo = ""
+  }
+
+  private func row(_ listing: PluginStore.Listing) -> some View {
+    let m = listing.manifest
+    let tint = Color(pluginHex: m.tint) ?? Theme.accent
+    let installed = host.plugins.first { $0.id == m.id && !$0.builtin }
+    return HStack(spacing: 12) {
+      Image(systemName: m.icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(tint)
+        .frame(width: 30, height: 30).background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+      VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
+          Text(m.name).font(.system(size: 13, weight: .semibold))
+          if listing.featured {
+            Text("Featured").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.accent)
+              .padding(.horizontal, 6).padding(.vertical, 1).background(Theme.accent.opacity(0.14), in: Capsule())
+          }
+          Text([m.author, "v\(m.version)", listing.stars.map { "★ \($0)" }].compactMap { $0 }.joined(separator: " · "))
+            .font(.system(size: 11)).foregroundStyle(Theme.faint)
+        }
+        Text(m.summary ?? listing.id).font(.system(size: 11.5)).foregroundStyle(Theme.dim).lineLimit(2)
+        Text(listing.id).font(.system(size: 10.5)).foregroundStyle(Theme.faint)
+      }
+      Spacer()
+      if let installed, installed.manifest?.version == m.version {
+        Text("Installed").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.faint)
+      } else {
+        Button(installed == nil ? "Install" : "Update") { store.install(listing) }.buttonStyle(SoftPillButtonStyle())
+      }
+    }
+    .padding(.vertical, 4)
   }
 }

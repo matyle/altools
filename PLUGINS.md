@@ -156,6 +156,36 @@ Give your agent this page and a sentence, for example:
 
 Then switch it on in Settings › Notch › Plugins.
 
+## Share and publish
+
+**A file.** Settings › Notch › Plugins › **Export…** saves a plugin as `<id>.altoolsplugin` (the
+folder, zipped). Anyone with Altools double-clicks it, drags it onto Altools, or uses **Import…**;
+Altools shows the name, author and where it appears, and installs only after they confirm.
+
+**A link.** Put the plugin in a GitHub repository, then share:
+
+```
+altools://install-plugin?repo=you/your-plugin
+altools://install-plugin?repo=you/plugins&path=weather&ref=v1.2
+```
+
+`path` points at a plugin in a subfolder, `ref` at a branch or tag (default: the default branch). A
+`url=https://…` form installs any zip that holds a plugin. Pasting `you/your-plugin` or a GitHub
+link into **Install from GitHub** in Settings does the same.
+
+**The store.** Settings › Notch › Plugins › **Plugin store** lists:
+
+- every public GitHub repository with the topic **`altools-plugin`** and a `plugin.json` at its root.
+  To publish, push your plugin and add the topic (repository › About › ⚙ › Topics). Stars sort
+  the list. Update by pushing; users see **Update** when `version` changes.
+- **Featured** plugins from [`plugins/registry.json`](plugins/registry.json) in this repository. To be
+  featured, open a pull request adding `{ "repo": "you/your-plugin" }` (with `"path"` for a
+  subfolder and `"ref"` to pin a branch or tag) after checking it against this page.
+
+Store listings read `plugin.json` straight from GitHub, so keep `name`, `description`, `author`,
+`icon` and `version` filled in. A plugin from the store is still a program that runs as the user:
+keep it readable and don't fetch code to run at runtime.
+
 ## Tips
 
 - Keep runs short; cache slow API calls in `$ALTOOLS_DATA_DIR`.

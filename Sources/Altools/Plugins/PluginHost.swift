@@ -35,7 +35,13 @@ final class PluginHost: ObservableObject {
 
   static let shared = PluginHost()
   static var folder: URL { AppPaths.subdirectory("Plugins") }
-  static var builtinFolder: URL? { Bundle.main.url(forResource: "BuiltinPlugins", withExtension: nil) }
+  static var builtinFolder: URL? {
+    #if DEBUG
+    // An unbundled debug run has no Resources; the runtime test points here instead.
+    if let path = ProcessInfo.processInfo.environment["ALTOOLS_BUILTIN_PLUGINS"] { return URL(fileURLWithPath: path) }
+    #endif
+    return Bundle.main.url(forResource: "BuiltinPlugins", withExtension: nil)
+  }
 
   @Published private(set) var plugins: [Plugin] = []
   /// Called on the main queue for each alert id a plugin hasn't announced before.
