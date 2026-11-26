@@ -1,0 +1,194 @@
+import Foundation
+
+/// What a plugin run prints on stdout. Every part is optional; parts for slots the
+/// manifest doesn't list are ignored by the host. See PLUGINS.md.
+public struct PluginOutput: Equatable, Sendable {
+  public var ears: Ears?
+  public var home: Card?
+  public var tab: Page?
+  public var alerts: [Alert]
+  /// Seconds until the next refresh, overriding the manifest's interval once.
+  public var next: TimeInterval?
+
+  public init(ears: Ears? = nil, home: Card? = nil, tab: Page? = nil, alerts: [Alert] = [], next: TimeInterval? = nil) {
+    self.ears = ears
+    self.home = home
+    self.tab = tab
+    self.alerts = alerts
+    self.next = next
+  }
+
+  public struct Ears: Equatable, Sendable {
+    public var symbol: String?
+    public var text: String
+    public var tint: String?
+  }
+
+  public struct Card: Equatable, Sendable {
+    public var title: String?
+    public var rows: [Row]
+  }
+
+  public struct Page: Equatable, Sendable {
+    public var title: String?
+    public var sections: [Section]
+  }
+
+  public struct Section: Equatable, Sendable {
+    public var title: String?
+    public var rows: [Row]
+  }
+
+  public struct Row: Equatable, Sendable {
+    public var title: String
+    public var subtitle: String?
+    public var symbol: String?
+    public var tint: String?
+    /// Short text on the right, e.g. a time or a number.
+    public var value: String?
+    public var action: PluginAction?
+  }
+
+  public struct Alert: Equatable, Sendable {
+    /// Announced once per id; a later run repeating it shows nothing new.
+    public var id: String
+    public var title: String
+    public var body: String?
+    public var symbol: String?
+    public var tint: String?
+    public var action: PluginAction?
+  }
+
+  /// Parses stdout. Unknown fields are ignored; a malformed part is dropped rather than
+  /// failing the whole output, so one bad row doesn't blank the plugin.
+  public static func decode(_ data: Data) throws -> PluginOutput {
+    let trimmed = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    // A script may log before its JSON; the last line holding an object is the output.
+    let candidate = trimmed.hasPrefix("{") ? trimmed : (trimmed.split(separator: "\n").last(where: { $0.hasPrefix("{") }).map(String.init) ?? trimmed)
+    guard let object = try? JSONSerialization.jsonObject(with: Data(candidate.utf8)) as? [String: Any] else {
+      throw PluginOutputError.notJSONObject(String(candidate.prefix(200)))
+    }
+    return PluginOutput(
+      ears: (object["ears"] as? [String: Any]).flatMap(ears),
+      home: (object["home"] as? [String: Any]).map(card),
+      tab: (object["tab"] as? [String: Any]).map(page),
+      alerts: (object["alerts"] as? [[String: Any]] ?? []).compactMap(alert),
+      next: number(object["next"]).map { max(PluginManifest.minimumInterval, $0) }
+    )
+  }
+
+  private static func ears(_ o: [String: Any]) -> Ears? {
+    guard let text = string(o["text"]) else { return nil }
+    return Ears(symbol: string(o["symbol"]), text: String(text.prefix(24)), tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex))
+  }
+
+  private static func card(_ o: [String: Any]) -> Card {
+    Card(title: string(o["title"]), rows: rows(o["rows"]))
+  }
+
+  /// `sections`, or plain `rows` as a single untitled section.
+  private static func page(_ o: [String: Any]) -> Page {
+    let sections = (o["sections"] as? [[String: Any]] ?? []).map { Section(title: string($0["title"]), rows: rows($0["rows"])) }
+    let loose = rows(o["rows"])
+    return Page(title: string(o["title"]), sections: loose.isEmpty ? sections : [Section(title: nil, rows: loose)] + sections)
+  }
+
+  private static func rows(_ value: Any?) -> [Row] {
+    (value as? [[String: Any]] ?? []).compactMap { o in
+      guard let title = string(o["title"]) else { return nil }
+      return Row(title: title, subtitle: string(o["subtitle"]), symbol: string(o["symbol"]),
+                 tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex), value: string(o["value"]),
+                 action: (o["action"] as? [String: Any]).flatMap(PluginAction.init(json:)))
+    }
+  }
+
+  private static func alert(_ o: [String: Any]) -> Alert? {
+    guard let id = string(o["id"]), let title = string(o["title"]) else { return nil }
+    return Alert(id: id, title: title, body: string(o["body"]), symbol: string(o["symbol"]),
+                 tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex),
+                 action: (o["action"] as? [String: Any]).flatMap(PluginAction.init(json:)))
+  }
+
+  /// Strings, and numbers or booleans written where text was expected.
+  static func string(_ value: Any?) -> String? {
+    switch value {
+    case let text as String: return text.nonEmpty
+    case let number as NSNumber:
+      if CFGetTypeID(number) == CFBooleanGetTypeID() { return number.boolValue ? "true" : "false" }
+      return number.stringValue
+    default: return nil
+    }
+  }
+
+  static func number(_ value: Any?) -> Double? {
+    switch value {
+    case let number as NSNumber: return number.doubleValue
+    case let text as String: return Double(text)
+    default: return nil
+    }
+  }
+}
+
+/// What happens when a row or alert is clicked.
+public enum PluginAction: Equatable, Sendable {
+  /// Opens a URL: a web page, an app's own scheme, or a file:// path.
+  case open(URL)
+  /// Runs the plugin again with `ALTOOLS_EVENT=action:<id>`; its output replaces the current one.
+  case run(String)
+  /// Copies text to the clipboard.
+  case copy(String)
+
+  public init?(json o: [String: Any]) {
+    if let raw = PluginOutput.string(o["open"]), let url = URL(string: raw), url.scheme != nil {
+      self = .open(url)
+    } else if let id = PluginOutput.string(o["run"]) {
+      self = .run(id)
+    } else if let text = PluginOutput.string(o["copy"]) {
+      self = .copy(text)
+    } else {
+      return nil
+    }
+  }
+}
+
+public enum PluginOutputError: Error, Equatable, CustomStringConvertible {
+  case notJSONObject(String)
+
+  public var description: String {
+    switch self {
+    case .notJSONObject(let start): "output isn't a JSON object: \(start.isEmpty ? "(empty)" : start)"
+    }
+  }
+}
+
+/// Why a plugin was run.
+public enum PluginEvent: Equatable, Sendable {
+  case refresh
+  case action(String)
+
+  public var value: String {
+    switch self {
+    case .refresh: "refresh"
+    case .action(let id): "action:\(id)"
+    }
+  }
+}
+
+/// The environment a plugin run gets on top of the user's PATH and proxy.
+public enum PluginEnvironment {
+  public static func variables(manifest: PluginManifest, pluginDirectory: String, dataDirectory: String,
+                               event: PluginEvent, language: String, settings: [String: String]) -> [String: String] {
+    var env = [
+      "ALTOOLS_API": String(PluginManifest.apiVersion),
+      "ALTOOLS_EVENT": event.value,
+      "ALTOOLS_PLUGIN_ID": manifest.id,
+      "ALTOOLS_PLUGIN_DIR": pluginDirectory,
+      "ALTOOLS_DATA_DIR": dataDirectory,
+      "ALTOOLS_LANG": language,
+    ]
+    for setting in manifest.settings {
+      env[setting.environmentName] = settings[setting.key] ?? setting.defaultValue ?? ""
+    }
+    return env
+  }
+}
