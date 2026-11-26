@@ -23,6 +23,9 @@ public struct PluginManifest: Equatable, Sendable {
   public var tint: String?
   /// Executable path relative to the plugin folder.
   public var run: String
+  /// `interval`: run every `interval` seconds. `stream`: started once and kept running; each line it
+  /// prints is an output applied as it arrives, and events reach it as lines on stdin.
+  public var mode: PluginMode
   /// Seconds between refreshes, at least `minimumInterval`.
   public var interval: TimeInterval
   /// Seconds a run may take before it is stopped, 1...`maximumTimeout`.
@@ -55,6 +58,7 @@ public struct PluginManifest: Equatable, Sendable {
       icon: raw.icon?.nonEmpty ?? "puzzlepiece.extension.fill",
       tint: raw.tint.flatMap(normalizedHex),
       run: run,
+      mode: raw.mode.flatMap(PluginMode.init(rawValue:)) ?? .interval,
       interval: max(minimumInterval, raw.interval ?? defaultInterval),
       timeout: min(maximumTimeout, max(1, raw.timeout ?? defaultTimeout)),
       slots: slots,
@@ -89,12 +93,15 @@ public struct PluginManifest: Equatable, Sendable {
     var icon: String?
     var tint: String?
     var run: String?
+    var mode: String?
     var interval: TimeInterval?
     var timeout: TimeInterval?
     var slots: [String]?
     var settings: [PluginSetting]?
   }
 }
+
+public enum PluginMode: String, Sendable { case interval, stream }
 
 public enum PluginSlot: String, CaseIterable, Sendable {
   /// Short status beside the notch when nothing more urgent is live.

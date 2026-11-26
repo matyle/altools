@@ -96,6 +96,8 @@ final class NotchModel: ObservableObject {
   @Published var inbox: [NotificationWatcher.Banner] = []
   @Published var expanded = false
   @Published var tab: Tab = .home
+  /// The plugin whose page is open while `tab` is `.plugins`.
+  @Published var pluginTab: String?
   /// "Keep open": the notch stays expanded when the pointer leaves.
   @Published var pinned = false
   @Published private(set) var flash: Flash?
@@ -143,10 +145,23 @@ final class NotchModel: ObservableObject {
       switch tab {
       case .home: true
       case .media: AppSettings.shared.isOn("notch.nowplaying")
-      case .plugins: AppSettings.shared.isOn("notch.plugins") && plugins.plugins.contains { $0.shows(.tab) }
+      // Plugins get a tab each (pluginTabs); `.plugins` only marks that one of them is open.
+      case .plugins: false
       default: AppSettings.shared.isOn("notch.\(tab.rawValue)")
       }
     }
+  }
+
+  /// Enabled plugins with a page, each shown as its own tab after the built-in ones.
+  var pluginTabs: [PluginHost.Plugin] {
+    guard AppSettings.shared.isOn("notch.plugins") else { return [] }
+    return plugins.plugins.filter { $0.shows(.tab) }
+  }
+
+  /// The open plugin page, or nil (and Home is shown) when that plugin is gone.
+  var openPlugin: PluginHost.Plugin? {
+    guard tab == .plugins, let id = pluginTab else { return nil }
+    return pluginTabs.first { $0.id == id }
   }
 
   var collapsedSize: CGSize {

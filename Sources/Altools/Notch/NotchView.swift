@@ -239,6 +239,9 @@ private struct ExpandedNotch: View {
         ForEach(model.tabs) { tab in
           tabButton(tab).help(tab.title)
         }
+        ForEach(model.pluginTabs) { plugin in
+          pluginTabButton(plugin).help(plugin.name)
+        }
         Spacer(minLength: 8)
         BatteryBadge(battery: model.battery)
         Button { model.pinned.toggle() } label: {
@@ -258,12 +261,33 @@ private struct ExpandedNotch: View {
         case .notes: NotesTab(notes: model.notes)
         case .shelf: ShelfTab(shelf: model.shelf, actions: actions)
         case .usage: UsageTab(usage: model.usage)
-        case .plugins: PluginsTab(host: model.plugins)
+        case .plugins:
+          if let plugin = model.openPlugin { PluginPage(plugin: plugin) } else { HomeTab(model: model, nowPlaying: model.nowPlaying, reminders: model.reminders, actions: actions) }
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
     .foregroundStyle(.white)
+  }
+
+  private func pluginTabButton(_ plugin: PluginHost.Plugin) -> some View {
+    let selected = model.tab == .plugins && model.pluginTab == plugin.id
+    return Button {
+      withAnimation(.snappy) {
+        model.pluginTab = plugin.id
+        model.tab = .plugins
+      }
+    } label: {
+      HStack(spacing: 5) {
+        Image(systemName: plugin.manifest?.icon ?? "puzzlepiece.extension.fill").font(.system(size: 11, weight: .semibold))
+        if selected { Text(plugin.output?.tab?.title ?? plugin.name).font(.system(size: 12, weight: .semibold)).lineLimit(1) }
+      }
+      .foregroundStyle(selected ? Color.white : Color.white.opacity(0.45))
+      .padding(.horizontal, selected ? 9 : 7).frame(height: 22)
+      .background(selected ? Color.white.opacity(0.14) : .clear, in: Capsule())
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
   }
 
   private func tabButton(_ tab: NotchModel.Tab) -> some View {

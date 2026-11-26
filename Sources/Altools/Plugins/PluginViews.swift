@@ -52,81 +52,63 @@ struct PluginRowList: View {
   }
 }
 
-/// A plugin's card on Home: its title and first rows.
+/// A plugin's card on Home: its own layout when it gives one, otherwise its title and first rows.
 struct PluginHomeCard: View {
   let plugin: PluginHost.Plugin
 
   var body: some View {
     let tint = Color(pluginHex: plugin.manifest?.tint) ?? .orange
     VStack(alignment: .leading, spacing: 6) {
-      HStack(spacing: 5) {
-        Image(systemName: plugin.manifest?.icon ?? "puzzlepiece.extension.fill").font(.system(size: 10, weight: .semibold)).foregroundStyle(tint)
-        Text(plugin.output?.home?.title ?? plugin.name).font(.system(size: 11, weight: .semibold)).lineLimit(1)
-      }
       if let error = plugin.error {
+        header(tint)
         Text(error).font(.system(size: 10)).foregroundStyle(.orange).lineLimit(3)
+      } else if let view = plugin.output?.home?.view {
+        PluginNodeView(node: view, pluginID: plugin.id, folder: plugin.folder, accent: tint)
       } else if let rows = plugin.output?.home?.rows, !rows.isEmpty {
+        header(tint)
         PluginRowList(rows: Array(rows.prefix(3)), pluginID: plugin.id, tint: tint, compact: true)
       } else {
+        header(tint)
         Text(plugin.running ? "Loading…" : "Nothing to show").font(.system(size: 10)).foregroundStyle(.white.opacity(0.45))
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
-}
 
-/// The notch's Plugins tab: a pill per plugin with a page, and the chosen page.
-struct PluginsTab: View {
-  @ObservedObject var host: PluginHost
-  @State private var selected: String?
-
-  var body: some View {
-    let pages = host.plugins.filter { $0.shows(.tab) }
-    let current = pages.first { $0.id == selected } ?? pages.first
-    VStack(alignment: .leading, spacing: 8) {
-      if pages.count > 1 {
-        HStack(spacing: 4) {
-          ForEach(pages) { plugin in
-            let on = plugin.id == current?.id
-            Button { selected = plugin.id } label: {
-              Label(plugin.name, systemImage: plugin.manifest?.icon ?? "puzzlepiece.extension.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .padding(.horizontal, 9).frame(height: 22)
-                .background(on ? Color.white.opacity(0.14) : .clear, in: Capsule())
-                .foregroundStyle(on ? .white : .white.opacity(0.5))
-            }
-            .buttonStyle(.plain)
-          }
-          Spacer()
-        }
-      }
-      if let plugin = current {
-        page(plugin)
-      } else {
-        VStack(spacing: 6) {
-          Image(systemName: "puzzlepiece.extension").font(.system(size: 24)).foregroundStyle(.orange)
-          Text("No plugin pages yet").font(.system(size: 13, weight: .semibold))
-          Text("Add or make one in Settings › Notch › Plugins.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-      }
+  private func header(_ tint: Color) -> some View {
+    HStack(spacing: 5) {
+      Image(systemName: plugin.manifest?.icon ?? "puzzlepiece.extension.fill").font(.system(size: 10, weight: .semibold)).foregroundStyle(tint)
+      Text(plugin.output?.home?.title ?? plugin.name).font(.system(size: 11, weight: .semibold)).lineLimit(1)
     }
   }
+}
 
-  @ViewBuilder private func page(_ plugin: PluginHost.Plugin) -> some View {
+/// A plugin's page, shown when its tab in the notch's tab row is open.
+struct PluginPage: View {
+  let plugin: PluginHost.Plugin
+
+  var body: some View {
     let tint = Color(pluginHex: plugin.manifest?.tint) ?? .orange
     ScrollView {
       VStack(alignment: .leading, spacing: 8) {
         if let error = plugin.error {
           Label(error, systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
         }
-        ForEach(Array((plugin.output?.tab?.sections ?? []).enumerated()), id: \.offset) { _, section in
-          if let title = section.title {
-            Text(title.uppercased()).font(.system(size: 10, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.4))
+        if let view = plugin.output?.tab?.view {
+          PluginNodeView(node: view, pluginID: plugin.id, folder: plugin.folder, accent: tint)
+        } else {
+          ForEach(Array((plugin.output?.tab?.sections ?? []).enumerated()), id: \.offset) { _, section in
+            if let title = section.title {
+              Text(title.uppercased()).font(.system(size: 10, weight: .bold)).tracking(0.5).foregroundStyle(.white.opacity(0.4))
+            }
+            PluginRowList(rows: section.rows, pluginID: plugin.id, tint: tint)
           }
-          PluginRowList(rows: section.rows, pluginID: plugin.id, tint: tint)
+        }
+        if plugin.output == nil, plugin.error == nil {
+          Text(plugin.running ? "Loading…" : "Nothing to show yet").font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
         }
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
     .scrollIndicators(.never)
   }

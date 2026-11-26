@@ -6,10 +6,16 @@ if [ "$ALTOOLS_LANG" = "zh" ]; then title="你好"; else title="Hello"; fi
 cat <<JSON
 {
   "ears": { "symbol": "clock", "text": "$now" },
-  "home": { "title": "$title", "rows": [
-    { "title": "$greeting", "symbol": "hand.wave", "action": { "run": "greet" } },
-    { "title": "Altools on GitHub", "symbol": "link", "action": { "open": "https://github.com/matyle/altools" } }
-  ] },
+  "home": { "view": { "type": "vstack", "spacing": 6, "children": [
+    { "type": "hstack", "children": [
+      { "type": "symbol", "name": "hand.wave.fill", "color": "green" },
+      { "type": "text", "text": "$title", "weight": "semibold" },
+      { "type": "spacer" },
+      { "type": "badge", "text": "view", "color": "green" } ] },
+    { "type": "text", "text": "$now", "size": 22, "weight": "bold", "mono": true },
+    { "type": "progress", "value": $(( $(date +%S) * 100 / 59 ))e-2, "color": "green" },
+    { "type": "text", "text": "$greeting — click me", "size": 10, "color": "secondary", "action": { "run": "greet" } }
+  ] } },
   "tab": { "title": "$title", "sections": [
     { "title": "Actions", "rows": [
       { "title": "$greeting", "subtitle": "run: runs this script again", "symbol": "hand.wave", "action": { "run": "greet" } },

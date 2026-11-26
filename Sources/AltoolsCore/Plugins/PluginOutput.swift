@@ -33,20 +33,26 @@ public struct PluginOutput: Equatable, Sendable {
   public struct Card: Equatable, Sendable {
     public var title: String?
     public var rows: [Row]
+    /// The plugin's own layout; drawn instead of `rows` when present.
+    public var view: PluginNode?
 
-    public init(title: String? = nil, rows: [Row]) {
+    public init(title: String? = nil, rows: [Row] = [], view: PluginNode? = nil) {
       self.title = title
       self.rows = rows
+      self.view = view
     }
   }
 
   public struct Page: Equatable, Sendable {
     public var title: String?
     public var sections: [Section]
+    /// The plugin's own layout; drawn instead of `sections` when present.
+    public var view: PluginNode?
 
-    public init(title: String? = nil, sections: [Section]) {
+    public init(title: String? = nil, sections: [Section] = [], view: PluginNode? = nil) {
       self.title = title
       self.sections = sections
+      self.view = view
     }
   }
 
@@ -122,14 +128,15 @@ public struct PluginOutput: Equatable, Sendable {
   }
 
   private static func card(_ o: [String: Any]) -> Card {
-    Card(title: string(o["title"]), rows: rows(o["rows"]))
+    Card(title: string(o["title"]), rows: rows(o["rows"]), view: PluginNode.decode(o["view"]))
   }
 
   /// `sections`, or plain `rows` as a single untitled section.
   private static func page(_ o: [String: Any]) -> Page {
     let sections = (o["sections"] as? [[String: Any]] ?? []).map { Section(title: string($0["title"]), rows: rows($0["rows"])) }
     let loose = rows(o["rows"])
-    return Page(title: string(o["title"]), sections: loose.isEmpty ? sections : [Section(title: nil, rows: loose)] + sections)
+    return Page(title: string(o["title"]), sections: loose.isEmpty ? sections : [Section(title: nil, rows: loose)] + sections,
+                view: PluginNode.decode(o["view"]))
   }
 
   private static func rows(_ value: Any?) -> [Row] {
@@ -203,12 +210,16 @@ public enum PluginOutputError: Error, Equatable, CustomStringConvertible {
 /// Why a plugin was run.
 public enum PluginEvent: Equatable, Sendable {
   case refresh
+  /// The user clicked an element whose action is `{"run": id}`.
   case action(String)
+  /// Another program opened `altools://plugin/<id>/run?event=<name>`.
+  case trigger(String)
 
   public var value: String {
     switch self {
     case .refresh: "refresh"
     case .action(let id): "action:\(id)"
+    case .trigger(let name): "trigger:\(name)"
     }
   }
 }

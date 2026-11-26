@@ -143,7 +143,8 @@ enum HomeSlot: Hashable, Identifiable {
   var width: CGFloat? {
     switch self {
     case .builtin(let card): card.width
-    case .plugin: 170
+    // Plugin cards share the row like Calendar & to-dos.
+    case .plugin: nil
     }
   }
 }

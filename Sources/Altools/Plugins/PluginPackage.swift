@@ -174,7 +174,16 @@ enum PluginPackage {
   }
 
   /// Handles `altools://install-plugin?repo=owner/name[&path=sub/dir][&ref=v1.0]` or `?url=<https zip>`.
+  /// Also `altools://plugin/<id>/run[?event=<name>]`, which runs a plugin with
+  /// `ALTOOLS_EVENT=trigger:<name>` (default "run") so other tools can trigger it.
   static func handle(_ url: URL) -> Bool {
+    if url.scheme == "altools", url.host == "plugin" {
+      let parts = url.pathComponents.filter { $0 != "/" }
+      guard parts.count == 2, parts[1] == "run", PluginManifest.isValidID(parts[0]) else { return true }
+      let event = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "event" }?.value ?? "run"
+      PluginHost.shared.refresh(parts[0], event: .trigger(event))
+      return true
+    }
     guard url.scheme == "altools", url.host == "install-plugin",
           let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return false }
     let value = { (name: String) in items.first { $0.name == name }?.value }

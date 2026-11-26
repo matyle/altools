@@ -33,6 +33,13 @@ import Testing
     #expect(m.slots == [.ears])
   }
 
+  @Test func modeDefaultsToIntervalAndReadsStream() throws {
+    #expect(try manifest(#"{"id": "a", "run": "x"}"#).mode == .interval)
+    #expect(try manifest(#"{"id": "a", "run": "x", "mode": "stream"}"#).mode == .stream)
+    #expect(try manifest(#"{"id": "a", "run": "x", "mode": "websocket"}"#).mode == .interval)
+    #expect(PluginEvent.trigger("deploy").value == "trigger:deploy")
+  }
+
   @Test func omittedSlotsMeansAll() throws {
     #expect(try manifest(#"{"id": "a", "run": "x"}"#).slots == Set(PluginSlot.allCases))
   }
@@ -111,3 +118,62 @@ import Testing
     #expect(env["ALTOOLS_LANG"] == "zh")
   }
 }
+
+@Suite struct PluginViewTests {
+  private func node(_ json: String) -> PluginNode? {
+    PluginNode.decode(try? JSONSerialization.jsonObject(with: Data(json.utf8)))
+  }
+
+  @Test func decodesEveryNodeType() throws {
+    let tree = node(##"""
+    {"type": "vstack", "spacing": 4, "children": [
+      {"type": "hstack", "align": "top", "children": [
+        {"type": "badge", "text": "US", "color": "blue"},
+        {"type": "text", "text": "AAPL", "weight": "bold", "size": 99, "mono": true},
+        {"type": "spacer"},
+        {"type": "symbol", "name": "arrow.up", "color": "#98c379"}]},
+      {"type": "grid", "columns": 9, "children": [{"type": "card", "children": [{"type": "progress", "value": 2}]}]},
+      {"type": "sparkline", "values": [1, "2", 3], "height": 20},
+      {"type": "image", "url": "https://example.com/a.png", "radius": 4},
+      {"type": "divider"}
+    ]}
+    """##)
+    guard case .stack(.vertical, .leading, 4, let children, _) = tree else { Issue.record("not a vstack"); return }
+    #expect(children.count == 5)
+    guard case .stack(.horizontal, .top, _, let row, _) = children[0] else { Issue.record("not an hstack"); return }
+    #expect(row[0] == .badge("US", color: .named(.blue), style: .init()))
+    #expect(row[1] == .text("AAPL", size: 28, weight: .bold, color: nil, mono: true, lines: nil, style: .init()))
+    #expect(row[3] == .symbol("arrow.up", size: nil, color: .hex("#98C379"), style: .init()))
+    guard case .grid(let columns, _, let cells, _) = children[1], case .card(_, _, let inner, _) = cells[0] else { Issue.record("grid"); return }
+    #expect(columns == 6)
+    #expect(inner[0] == .progress(1, color: nil, style: .init()))
+    #expect(children[2] == .sparkline([1, 2, 3], color: nil, style: .init(height: 20)))
+  }
+
+  @Test func skipsUnknownTypesAndKeepsActions() {
+    let tree = node(#"{"type": "hstack", "children": [{"type": "chart3d"}, {"type": "text", "text": "Open", "action": {"open": "https://a.b"}}, {"type": "text"}]}"#)
+    guard case .stack(_, _, _, let children, _) = tree else { Issue.record("not a stack"); return }
+    #expect(children.count == 1)
+    #expect(children[0] == .text("Open", size: nil, weight: .regular, color: nil, mono: false, lines: nil,
+                                 style: .init(action: .open(URL(string: "https://a.b")!))))
+  }
+
+  @Test func enforcesDepthAndNodeLimits() {
+    var deep = #"{"type": "text", "text": "leaf"}"#
+    for _ in 0..<20 { deep = #"{"type": "vstack", "children": ["# + deep + "]}" }
+    var depth = 0
+    var current = node(deep)
+    while case .stack(_, _, _, let children, _)? = current { depth += 1; current = children.first }
+    #expect(depth <= PluginNode.maximumDepth + 1)
+    let many = "[" + Array(repeating: #"{"type": "spacer"}"#, count: 1_000).joined(separator: ",") + "]"
+    guard case .stack(_, _, _, let children, _) = node(#"{"type": "vstack", "children": "# + many + "}") else { Issue.record("stack"); return }
+    #expect(children.count == PluginNode.maximumNodes - 1)
+  }
+
+  @Test func outputCarriesViews() throws {
+    let o = try PluginOutput.decode(Data(#"{"home": {"view": {"type": "text", "text": "hi"}}, "tab": {"title": "T", "view": {"type": "divider"}}}"#.utf8))
+    #expect(o.home?.view == .text("hi", size: nil, weight: .regular, color: nil, mono: false, lines: nil, style: .init()))
+    #expect(o.tab?.view == .divider)
+  }
+}
+

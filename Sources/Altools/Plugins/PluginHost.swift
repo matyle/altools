@@ -48,6 +48,9 @@ final class PluginHost: ObservableObject {
   var onAlert: (PluginOutput.Alert, Plugin) -> Void = { _, _ in }
 
   private var timers: [String: Timer] = [:]
+  /// Running stream-mode plugins, their stdin, and the delay before the next restart.
+  private var streams: [String: (process: Process, input: FileHandle)] = [:]
+  private var streamDelay: [String: TimeInterval] = [:]
   private var pending: [String: [PluginEvent]] = [:]
   private var watcher: DispatchSourceFileSystemObject?
   private var reloadWork: DispatchWorkItem?
@@ -73,6 +76,7 @@ final class PluginHost: ObservableObject {
     watcher = nil
     timers.values.forEach { $0.invalidate() }
     timers = [:]
+    for id in Array(streams.keys) { stopStream(id) }
   }
 
   // MARK: Discovery
@@ -148,8 +152,10 @@ final class PluginHost: ObservableObject {
       UserDefaults.standard.set(Array(ids), forKey: Self.enabledKey)
     }
     update(id) { $0.enabled = on; if !on { $0.output = nil } }
+    if !on { stopStream(id) }
     reschedule()
-    if on { refresh(id) }
+    // reschedule() already started a stream plugin; an interval plugin runs now.
+    if on, plugins.first(where: { $0.id == id })?.manifest?.mode != .stream { refresh(id) }
   }
 
   private static var enabledIDs: Set<String> {
@@ -183,8 +189,16 @@ final class PluginHost: ObservableObject {
   private func reschedule() {
     timers.values.forEach { $0.invalidate() }
     timers = [:]
-    for plugin in plugins where plugin.enabled && plugin.manifest != nil && plugin.problem == nil {
-      if plugin.output == nil, !plugin.running { refresh(plugin.id) } else { schedule(plugin.id, after: plugin.manifest!.interval) }
+    let runnable = plugins.filter { $0.enabled && $0.manifest != nil && $0.problem == nil }
+    for id in Array(streams.keys) where !runnable.contains(where: { $0.id == id && $0.manifest?.mode == .stream }) { stopStream(id) }
+    for plugin in runnable {
+      if plugin.manifest?.mode == .stream {
+        if streams[plugin.id] == nil { startStream(plugin.id) }
+      } else if plugin.output == nil, !plugin.running {
+        refresh(plugin.id)
+      } else {
+        schedule(plugin.id, after: plugin.manifest!.interval)
+      }
     }
   }
 
@@ -193,25 +207,140 @@ final class PluginHost: ObservableObject {
     timers[id] = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in self?.refresh(id) }
   }
 
-  /// Runs the plugin now; while a run is in progress the event waits its turn.
+  /// Runs the plugin now; while a run is in progress the event waits its turn. A running stream
+  /// plugin gets the event as a line on its stdin instead.
   func refresh(_ id: String, event: PluginEvent = .refresh) {
     guard let plugin = plugins.first(where: { $0.id == id }), plugin.enabled, plugin.problem == nil, let manifest = plugin.manifest else { return }
+    if manifest.mode == .stream {
+      if let stream = streams[id] {
+        try? stream.input.write(contentsOf: Data((event.value + "\n").utf8))
+      } else {
+        startStream(id)
+      }
+      return
+    }
     if plugin.running {
       pending[id, default: []].append(event)
       return
     }
     update(id) { $0.running = true }
-    let values = Dictionary(uniqueKeysWithValues: manifest.settings.map { ($0.key, value(of: $0, for: id)) })
-    let dataDirectory = AppPaths.subdirectory("PluginData").appendingPathComponent(id, isDirectory: true)
-    try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
-    var env = CLILocator.environment(proxy: AppSettings.shared.proxy)
-    env.merge(PluginEnvironment.variables(manifest: manifest, pluginDirectory: plugin.folder.path, dataDirectory: dataDirectory.path,
-                                          event: event, language: Self.language, settings: values)) { _, new in new }
+    let env = environment(for: plugin, manifest: manifest, event: event)
     let executable = plugin.folder.appendingPathComponent(manifest.run)
     DispatchQueue.global(qos: .utility).async { [weak self] in
       let result = Self.execute(executable, directory: plugin.folder, environment: env, timeout: manifest.timeout)
       DispatchQueue.main.async { self?.finish(id, event: event, result: result) }
     }
+  }
+
+  private func environment(for plugin: Plugin, manifest: PluginManifest, event: PluginEvent) -> [String: String] {
+    let values = Dictionary(uniqueKeysWithValues: manifest.settings.map { ($0.key, value(of: $0, for: plugin.id)) })
+    let dataDirectory = AppPaths.subdirectory("PluginData").appendingPathComponent(plugin.id, isDirectory: true)
+    try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+    var env = CLILocator.environment(proxy: AppSettings.shared.proxy)
+    env.merge(PluginEnvironment.variables(manifest: manifest, pluginDirectory: plugin.folder.path, dataDirectory: dataDirectory.path,
+                                          event: event, language: Self.language, settings: values)) { _, new in new }
+    return env
+  }
+
+  // MARK: Stream mode
+
+  /// Starts a stream plugin and applies each line it prints as an output; parts a line leaves out
+  /// keep what was shown, so a line with only `alerts` just pops a card.
+  private func startStream(_ id: String) {
+    guard streams[id] == nil, let plugin = plugins.first(where: { $0.id == id }), plugin.enabled, plugin.problem == nil,
+          let manifest = plugin.manifest, manifest.mode == .stream else { return }
+    let executable = plugin.folder.appendingPathComponent(manifest.run)
+    if !FileManager.default.isExecutableFile(atPath: executable.path) {
+      try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
+    }
+    let process = Process()
+    process.executableURL = executable
+    process.currentDirectoryURL = plugin.folder
+    process.environment = environment(for: plugin, manifest: manifest, event: .refresh)
+    let input = Pipe(), output = Pipe(), errors = Pipe()
+    process.standardInput = input
+    process.standardOutput = output
+    process.standardError = errors
+    var buffer = Data()
+    output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+      let chunk = handle.availableData
+      guard !chunk.isEmpty else { return }
+      buffer.append(chunk)
+      while let newline = buffer.firstIndex(of: 0x0A) {
+        let line = buffer[buffer.startIndex..<newline]
+        buffer.removeSubrange(buffer.startIndex...newline)
+        let text = String(decoding: line, as: UTF8.self)
+        DispatchQueue.main.async { self?.applyStreamLine(text, plugin: id) }
+      }
+    }
+    errors.fileHandleForReading.readabilityHandler = { [weak self] handle in
+      let chunk = handle.availableData
+      guard !chunk.isEmpty else { return }
+      let text = String(decoding: chunk, as: UTF8.self)
+      DispatchQueue.main.async { self?.appendLog(text, plugin: id) }
+    }
+    let startedAt = Date()
+    process.terminationHandler = { [weak self] finished in
+      output.fileHandleForReading.readabilityHandler = nil
+      errors.fileHandleForReading.readabilityHandler = nil
+      DispatchQueue.main.async { self?.streamEnded(id, status: finished.terminationStatus, ranFor: Date().timeIntervalSince(startedAt)) }
+    }
+    do {
+      try process.run()
+      streams[id] = (process, input.fileHandleForWriting)
+      update(id) { $0.running = true; $0.runError = nil }
+      appendLog("[\(Date().formatted(date: .omitted, time: .standard))] stream started\n", plugin: id)
+    } catch {
+      update(id) { $0.runError = "can't start \(manifest.run): \(error.localizedDescription)" }
+    }
+  }
+
+  private func stopStream(_ id: String) {
+    guard let stream = streams.removeValue(forKey: id) else { return }
+    stream.process.terminationHandler = nil
+    stream.process.terminate()
+    update(id) { $0.running = false }
+  }
+
+  private func applyStreamLine(_ line: String, plugin id: String) {
+    let trimmed = line.trimmingCharacters(in: .whitespaces)
+    guard trimmed.hasPrefix("{") else {
+      if !trimmed.isEmpty { appendLog(trimmed + "\n", plugin: id) }
+      return
+    }
+    do {
+      let next = try PluginOutput.decode(Data(trimmed.utf8))
+      update(id) { p in
+        var merged = p.output ?? PluginOutput()
+        if next.ears != nil { merged.ears = next.ears }
+        if next.home != nil { merged.home = next.home }
+        if next.tab != nil { merged.tab = next.tab }
+        p.output = merged
+        p.lastRun = Date()
+        p.runError = nil
+      }
+      if let plugin = plugins.first(where: { $0.id == id }), plugin.shows(.alerts) { announce(next.alerts, from: plugin) }
+    } catch let error as PluginOutputError {
+      update(id) { $0.runError = error.description }
+    } catch {}
+  }
+
+  /// A stream that exits is restarted after 5 s, doubling up to 5 minutes; one that ran for a
+  /// minute or more counts as healthy and starts over at 5 s.
+  private func streamEnded(_ id: String, status: Int32, ranFor: TimeInterval) {
+    streams[id] = nil
+    update(id) { $0.running = false }
+    guard started, let plugin = plugins.first(where: { $0.id == id }), plugin.enabled, plugin.manifest?.mode == .stream else { return }
+    let delay = ranFor >= 60 ? 5 : min((streamDelay[id] ?? 2.5) * 2, 300)
+    streamDelay[id] = delay
+    update(id) { $0.runError = status == 0 ? nil : "stream exited with status \(status); restarting in \(Int(delay)) s" }
+    appendLog("[\(Date().formatted(date: .omitted, time: .standard))] stream exited (\(status)); restart in \(Int(delay)) s\n", plugin: id)
+    timers[id]?.invalidate()
+    timers[id] = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in self?.startStream(id) }
+  }
+
+  private func appendLog(_ text: String, plugin id: String) {
+    update(id) { $0.log = String(($0.log + text).suffix(Self.logLimit)) }
   }
 
   private struct RunResult {

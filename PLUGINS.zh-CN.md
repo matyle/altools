@@ -2,8 +2,8 @@
 
 [English](PLUGINS.md) · **简体中文**
 
-插件可以把你自己的信息放进 Altools 的刘海：刘海旁边的一个数字、主页上的一张卡片、「插件」标签页里的一页，
-以及从刘海弹下来的提醒卡片。一个插件就是一个文件夹，里面有 `plugin.json` 和一个任意语言写的程序。
+插件可以把你自己的信息放进 Altools 的刘海：刘海旁边的一个数字、主页上的一个小组件、刘海里属于它自己的标签页，
+以及从刘海弹下来的提醒卡片。插件也可以完全没有界面，只在发生某件事时弹出提醒。一个插件就是一个文件夹，里面有 `plugin.json` 和一个任意语言写的程序。
 Altools 定时运行这个程序，程序打印一段 JSON 告诉 Altools 要显示什么。整个 API 就这么多。
 
 你可以手写，也可以把这一页交给 Claude Code 或其他编程 agent 让它来写，或者在
@@ -52,6 +52,7 @@ Altools 定时运行这个程序，程序打印一段 JSON 告诉 Altools 要显
 | `icon` | 一个 [SF Symbol](https://developer.apple.com/sf-symbols/) 名称。 |
 | `tint` | `#RRGGBB` 强调色。 |
 | `run` | 程序路径，相对于插件文件夹；没有可执行权限会自动加上。 |
+| `mode` | `interval`（默认）：每 `interval` 秒运行一次。`stream`：启动一次后一直运行，见 [常驻插件](#常驻插件)。 |
 | `interval` | 两次运行之间的秒数，至少 10，默认 300。 |
 | `timeout` | 一次运行最多多少秒，超时就停止，1 到 120，默认 20。 |
 | `slots` | 输出可以出现在哪里：`ears`、`home`、`tab`、`alerts`，默认全部。 |
@@ -64,7 +65,7 @@ Altools 以插件文件夹为工作目录启动程序，环境里带着用户的
 | 变量 | 值 |
 |---|---|
 | `ALTOOLS_API` | `1` |
-| `ALTOOLS_EVENT` | 定时运行时是 `refresh`；用户点了 `run` 动作时是 `action:<id>` |
+| `ALTOOLS_EVENT` | 定时运行时是 `refresh`；用户点了 `run` 动作时是 `action:<id>`；其他程序用 [触发链接](#触发链接) 调用时是 `trigger:<name>` |
 | `ALTOOLS_PLUGIN_ID` | 插件 id |
 | `ALTOOLS_PLUGIN_DIR` | 插件文件夹 |
 | `ALTOOLS_DATA_DIR` | 可写的文件夹，放缓存和状态，多次运行之间会保留 |
@@ -104,12 +105,14 @@ Altools 以插件文件夹为工作目录启动程序，环境里带着用户的
 | 部分 | 显示在 |
 |---|---|
 | `ears` | 刘海旁边，在没有更重要的动态（会议、音乐、agent）时显示。`text` 最多 24 个字符。 |
-| `home` | 主页上的一张卡片，显示前三行。用户在 设置 › 刘海 › 主页布局 里添加。 |
-| `tab` | 刘海「插件」标签页里的一页。`sections` 可以带标题；直接写 `rows` 也可以。 |
+| `home` | 主页上的小组件：你自己的 `view`，或者 `title` 加前三行 `rows`。用户在 设置 › 刘海 › 主页布局 里摆放，和同一行的其他卡片平分宽度。 |
+| `tab` | 刘海标签栏里插件自己的标签页（图标用 `icon`，打开时显示 `title`）：一个 `view`，或者 `sections` / `rows`。 |
 | `alerts` | 从刘海弹下来的卡片。每个 `id` 只会出现一次，所以重复输出也没关系。 |
 | `next` | 距离下一次运行的秒数，只覆盖一次 `interval`（至少 10）。 |
 
 **行（row）** 是 `{ "title", "subtitle"?, "symbol"?, "tint"?, "value"?, "action"? }`；`value` 是右侧的短文字，比如时间或数字。
+
+`home` 和 `tab` 可以用简单的 `rows`，也可以用自己排版的 [`view`](#视图自己的界面)。
 
 **动作（action）** 是下面其中一种：
 
@@ -117,6 +120,62 @@ Altools 以插件文件夹为工作目录启动程序，环境里带着用户的
 - `{ "run": "<id>" }` 以 `ALTOOLS_EVENT=action:<id>` 再运行一次程序，这次的输出替换当前显示的内容。
   适合「标记完成」「立即刷新」「稍后提醒」这类操作。
 - `{ "copy": "<text>" }` 把文字复制到剪贴板。
+
+## 视图：自己的界面
+
+和小组件一样，插件可以自己排版界面。在 `home.view` 或 `tab.view` 里放一棵节点树，Altools 会按刘海的风格原生绘制。
+任何节点都可以带 `action`，带了就能点击。
+
+```json
+{ "tab": { "title": "行情", "view":
+  { "type": "grid", "columns": 2, "children": [
+    { "type": "card", "action": { "open": "https://finance.yahoo.com/quote/AAPL" }, "children": [
+      { "type": "hstack", "children": [
+        { "type": "badge", "text": "美股" },
+        { "type": "text", "text": "AAPL", "weight": "bold" },
+        { "type": "spacer" },
+        { "type": "text", "text": "231.47", "mono": true } ] },
+      { "type": "text", "text": "+0.86%", "size": 10, "color": "green" },
+      { "type": "sparkline", "values": [228, 230, 229, 231.5], "color": "green" } ] } ] } } }
+```
+
+| 类型 | 属性 |
+|---|---|
+| `vstack`、`hstack` | `children`、`spacing`、`align`（`leading`/`center`/`trailing`；hstack 用 `top`/`center`/`bottom`） |
+| `grid` | `children`、`columns`（1–6）、`spacing` |
+| `card` | `children`（竖排）、`padding`、`color`（背景色调） |
+| `text` | `text`、`size`（9–28）、`weight`（`regular`/`medium`/`semibold`/`bold`）、`color`、`mono`（数字等宽）、`lines` |
+| `symbol` | `name`（SF Symbol）、`size`、`color` |
+| `image` | `url`：`https://…` 或插件文件夹里的文件；`width`、`height`、`radius` |
+| `badge` | `text`、`color` |
+| `progress` | `value` 0–1、`color` |
+| `sparkline` | `values`（数字数组）、`color`、`height` |
+| `spacer`、`divider` | — |
+
+所有节点还可以带 `width`、`height`、`flex`（`true` 表示撑满宽度）、`opacity` 和 `action`。
+颜色用 `#RRGGBB` 或 `primary`、`secondary`、`tertiary`、`green`、`red`、`orange`、`yellow`、`blue`、`purple`、`cyan`。
+节点树最多 12 层、400 个节点；不认识的类型会被跳过。
+
+## 常驻插件
+
+响应事件而不是按时间运行的插件，设置 `"mode": "stream"`。Altools 启动程序一次，然后让它一直运行：
+
+- **每打印一行**（stdout）就是一个输出对象，立即生效。某一行没写的部分保留原来显示的内容，所以只含 `alerts` 的一行就只弹出卡片；
+  `slots` 只有 `["alerts"]` 的插件完全没有界面。
+- **事件从 stdin 按行传进来**：用户点了 `run` 动作是 `action:<id>`，触发链接是 `trigger:<name>`。
+- 程序退出后 5 秒重启，之后每次翻倍，最长 5 分钟；插件被关闭时停止。
+
+例子见 [`examples/plugins/site-monitor`](examples/plugins/site-monitor)：网站挂掉或恢复时才弹提醒。
+
+## 触发链接
+
+任何程序都可以运行插件：hook、cron、快捷指令、CI 脚本。
+
+```sh
+open -g "altools://plugin/deploys/run?event=finished"
+```
+
+定时插件会以 `ALTOOLS_EVENT=trigger:finished` 运行一次；常驻插件会从 stdin 收到 `trigger:finished`。
 
 ## 最小的插件
 
@@ -140,7 +199,9 @@ cat <<EOF
 EOF
 ```
 
-更多例子在 [`examples/plugins`](examples/plugins)：`hello`，以及一个滴答清单 / TickTick 任务列表。
+更多例子在 [`examples/plugins`](examples/plugins)：`hello`（行和视图）、滴答清单 / TickTick 任务列表，
+以及 `site-monitor`（没有界面的常驻插件）。内置的行情插件（[`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)）
+是视图的完整例子。
 
 ## 让 AI agent 来写
 

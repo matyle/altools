@@ -58,6 +58,7 @@ struct HomeTab: View {
     case .builtin(.agenda): nil
     case .plugin(let id): plugins.plugins.first { $0.id == id }?.shows(.tab) == true ? .plugins : nil
     }
+    if case .plugin(let id) = slot { model.pluginTab = id }
     if let tab { withAnimation(.snappy) { model.tab = tab } }
   }
 

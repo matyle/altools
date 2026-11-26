@@ -39,6 +39,10 @@ enum DebugPluginTest {
       ("test-bad-json", #"{"id": "test-bad-json", "run": "run.sh"}"#, "#!/bin/sh\necho 'not json'\n"),
       ("test-exit", #"{"id": "test-exit", "run": "run.sh"}"#, "#!/bin/sh\necho 'boom' >&2\nexit 3\n"),
       ("test-slow", #"{"id": "test-slow", "run": "run.sh", "timeout": 1}"#, "#!/bin/sh\nsleep 5\necho '{}'\n"),
+      ("test-stream", #"{"id": "test-stream", "run": "run.sh", "mode": "stream", "slots": ["ears", "alerts"]}"#,
+       "#!/bin/sh\necho '{\"ears\": {\"text\": \"live\"}}'\nsleep 1\necho '{\"alerts\": [{\"id\": \"s1\", \"title\": \"From a stream\"}]}'\nwhile read line; do echo \"{\\\"ears\\\": {\\\"text\\\": \\\"$line\\\"}}\"; done\n"),
+      ("test-trigger", #"{"id": "test-trigger", "run": "run.sh", "slots": ["home"]}"#,
+       "#!/bin/sh\necho \"{\\\"home\\\": {\\\"title\\\": \\\"$ALTOOLS_EVENT\\\"}}\"\n"),
     ]
     for (id, manifest, script) in broken {
       let folder = PluginHost.folder.appendingPathComponent(id)
@@ -54,19 +58,26 @@ enum DebugPluginTest {
     host.start()
     for folder in added { host.setEnabled(folder.lastPathComponent, true) }
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
       for plugin in host.plugins where added.contains(where: { $0.lastPathComponent == plugin.id }) {
         let o = plugin.output
         print("PLUGIN \(plugin.id): error=\(plugin.error ?? "-") ears=\(o?.ears?.text ?? "-") home=\(o?.home?.rows.map(\.title) ?? []) tabSections=\(o?.tab?.sections.count ?? 0)")
       }
       print("ALERTS \(alerts)")
       host.perform(.run("greet"), plugin: "hello")
+      host.perform(.run("ping"), plugin: "test-stream")
+      _ = PluginPackage.handle(URL(string: "altools://plugin/test-trigger/run?event=deploy")!)
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
-      print("AFTER ACTION hello home first row: \(host.plugins.first { $0.id == "hello" }?.output?.home?.rows.first?.title ?? "-")")
+    DispatchQueue.main.asyncAfter(deadline: .now() + 11) {
+      let stream = host.plugins.first { $0.id == "test-stream" }
+      print("STREAM ears=\(stream?.output?.ears?.text ?? "-") running=\(stream?.running ?? false)")
+      print("TRIGGER home title=\(host.plugins.first { $0.id == "test-trigger" }?.output?.home?.title ?? "-")")
+      let model = NotchModel()
+      print("TABS \(model.pluginTabs.map(\.id))")
+      print("HELLO view=\(host.plugins.first { $0.id == "hello" }?.output?.home?.view != nil)")
       let settings = AppSettings.shared
       let savedSlots = settings.homeCards
-      settings.homeSlotList = [.builtin(.media), .plugin("hello"), .plugin("ticktick")]
+      settings.homeSlotList = [.builtin(.media), .plugin("markets"), .plugin("hello")]
       func notch(_ setup: @escaping (NotchModel) -> Void) -> () -> AnyView {
         {
           let model = NotchModel()
@@ -79,7 +90,8 @@ enum DebugPluginTest {
       let scenes: [(String, CGSize, () -> AnyView)] = [
         ("plugin-ears", CGSize(width: 680, height: 80), notch { _ in }),
         ("plugin-home", CGSize(width: 760, height: 320), notch { $0.tab = .home; $0.expanded = true }),
-        ("plugin-tab", CGSize(width: 760, height: 320), notch { $0.tab = .plugins; $0.expanded = true }),
+        ("plugin-tab", CGSize(width: 760, height: 320), notch { $0.pluginTab = "markets"; $0.tab = .plugins; $0.expanded = true }),
+        ("plugin-tab-hello", CGSize(width: 760, height: 320), notch { $0.pluginTab = "hello"; $0.tab = .plugins; $0.expanded = true }),
         ("plugin-alert", CGSize(width: 680, height: 140), notch {
           $0.card = .plugin(id: "hello", alert: PluginOutput.Alert(id: "x", title: "Hello from a plugin", body: "Shown once a day. Edit run.sh to change me.", symbol: nil, tint: nil, action: nil))
         }),

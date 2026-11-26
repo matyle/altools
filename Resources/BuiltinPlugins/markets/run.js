@@ -85,12 +85,38 @@ const fmt = p => p >= 10000 ? p.toFixed(0) : p >= 100 ? p.toFixed(2) : p >= 1 ? 
 const pct = c => (c >= 0 ? "+" : "") + c.toFixed(2) + "%"
 const pageURL = i => i.market === "crypto" ? "https://www.binance.com/en/trade/" + i.code + "?type=spot"
   : i.market === "us" ? "https://finance.yahoo.com/quote/" + i.code
-  : "https://finance.yahoo.com/quote/" + String(+i.code).padStart(4, "0") + ".HK"
-const label = { crypto: zh ? "加密货币" : "Crypto", us: zh ? "美股" : "US stocks", hk: zh ? "港股" : "Hong Kong" }
+  : "https://finance.yahoo.com/quote/" + yahooHK(i.code)
+const yahooHK = code => String(+code).padStart(4, "0") + ".HK"
+const badge = { crypto: zh ? "币" : "Crypto", us: zh ? "美股" : "US", hk: zh ? "港股" : "HK" }
+const short = code => code.replace(/USDT$/, "")
+
+// Recent prices for the sparkline: 24 hourly closes (Binance) or a month of daily closes (Yahoo).
+// Cached for 10 minutes so the 15-second refresh doesn't refetch them.
+function history(item, cache) {
+  const key = item.market + ":" + item.code
+  const hit = cache[key]
+  if (hit && Date.now() - hit.at < 600000) return hit.values
+  let values = []
+  try {
+    if (item.market === "crypto") {
+      values = JSON.parse(fetch("https://api.binance.com/api/v3/klines?symbol=" + item.code + "&interval=1h&limit=24")).map(k => +k[4])
+    } else {
+      const symbol = item.market === "us" ? item.code : yahooHK(item.code)
+      const chart = JSON.parse(sh("/usr/bin/curl -s -m 8 -A Mozilla/5.0 " + q("https://query1.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1d&range=1mo")))
+      values = chart.chart.result[0].indicators.quote[0].close.filter(v => v != null)
+    }
+  } catch (e) {}
+  if (values.length >= 2) cache[key] = { at: Date.now(), values }
+  return values.length >= 2 ? values : (hit ? hit.values : [])
+}
+
+const text = (t, extra) => Object.assign({ type: "text", text: t }, extra || {})
 
 function run() {
   const cachePath = dataDir + "/resolved.json"
+  const historyPath = dataDir + "/history.json"
   const cache = readJSON(cachePath) || {}
+  const historyCache = readJSON(historyPath) || {}
   const entries = (getenv("ALTOOLS_SETTING_WATCHLIST") || "BTC, ETH, AAPL, NVDA, 00700").split(/[,，\n]/)
   const list = []
   const unknown = []
@@ -103,28 +129,61 @@ function run() {
   writeJSON(cachePath, cache)
 
   const prices = quotes(list)
-  const rows = list.map(i => {
+  const quotesList = list.map(i => {
     const p = prices[i.market + ":" + i.code]
-    const name = p && p.name ? p.name : i.name
-    return {
-      title: i.code,
-      subtitle: name !== i.code ? name : undefined,
-      value: p ? fmt(p.price) + "  " + pct(p.change) : "—",
-      symbol: p ? (p.change >= 0 ? "arrow.up.right" : "arrow.down.right") : "questionmark",
-      tint: p ? (p.change >= 0 ? "#98C379" : "#E06C75") : undefined,
-      action: { open: pageURL(i) },
-      market: i.market,
-    }
+    return { item: i, price: p, name: p && p.name ? p.name : i.name, color: p ? (p.change >= 0 ? "green" : "red") : "tertiary" }
   })
-  const sections = ["crypto", "us", "hk"].map(m => ({ title: label[m], rows: rows.filter(r => r.market === m) })).filter(s => s.rows.length)
-  if (unknown.length) sections.push({ title: zh ? "找不到" : "Not found", rows: unknown.map(u => ({ title: u, symbol: "questionmark.circle", subtitle: zh ? "检查拼写，或加上 us: / hk: / crypto:" : "Check the spelling, or add us: / hk: / crypto:" })) })
-  for (const r of rows) delete r.market
 
-  const first = rows.find(r => r.value !== "—")
+  // Home: code on the left, price over the coloured change on the right.
+  const homeRows = quotesList.slice(0, 4).map(({ item, price, color }) => ({
+    type: "hstack", action: { open: pageURL(item) }, children: [
+      text(short(item.code), { size: 11, weight: "semibold", lines: 1 }),
+      { type: "spacer" },
+      { type: "vstack", align: "trailing", spacing: 0, children: [
+        text(price ? fmt(price.price) : "—", { size: 11, weight: "medium", mono: true }),
+        text(price ? pct(price.change) : "", { size: 9, weight: "semibold", color, mono: true }),
+      ] },
+    ],
+  }))
+
+  // Page: a card per symbol with its market, name, price, change and a sparkline.
+  const cards = quotesList.map(({ item, price, name, color }) => {
+    const values = history(item, historyCache)
+    const children = [
+      { type: "hstack", children: [
+        { type: "badge", text: badge[item.market], color: "secondary" },
+        text(short(item.code), { size: 12, weight: "bold", lines: 1 }),
+        { type: "spacer" },
+        text(price ? fmt(price.price) : "—", { size: 12, weight: "semibold", mono: true }),
+      ] },
+      { type: "hstack", children: [
+        text(name !== item.code ? name : "", { size: 10, color: "tertiary", lines: 1 }),
+        { type: "spacer" },
+        text(price ? pct(price.change) : "", { size: 10, weight: "semibold", color, mono: true }),
+      ] },
+    ]
+    if (values.length >= 2) children.push({ type: "sparkline", values, color: price ? color : "tertiary", height: 22 })
+    return { type: "card", padding: 9, action: { open: pageURL(item) }, children }
+  })
+  writeJSON(historyPath, historyCache)
+
+  const page = [{ type: "grid", columns: 2, spacing: 6, children: cards }]
+  if (unknown.length) {
+    page.push(text((zh ? "找不到：" : "Not found: ") + unknown.join(", ") + (zh ? "（检查拼写，或加上 us: / hk: / crypto:）" : " (check the spelling, or add us: / hk: / crypto:)"),
+      { size: 10, color: "orange" }))
+  }
+
+  const first = quotesList.find(q => q.price)
   const earsOn = (getenv("ALTOOLS_SETTING_EARS") || "First symbol") !== "Off"
   return JSON.stringify({
-    ears: earsOn && first ? { symbol: first.symbol, text: first.title.replace(/USDT$/, "") + " " + first.value.split("  ")[0], tint: first.tint } : undefined,
-    home: { title: zh ? "行情" : "Markets", rows: rows.slice(0, 3) },
-    tab: { title: zh ? "行情" : "Markets", sections },
+    ears: earsOn && first ? { symbol: first.price.change >= 0 ? "arrow.up.right" : "arrow.down.right",
+      text: short(first.item.code) + " " + fmt(first.price.price), tint: first.price.change >= 0 ? "#98C379" : "#E06C75" } : undefined,
+    home: { view: { type: "vstack", spacing: 5, children: [
+      { type: "hstack", spacing: 5, children: [
+        { type: "symbol", name: "chart.line.uptrend.xyaxis", size: 10, color: "green" },
+        text(zh ? "行情" : "Markets", { size: 11, weight: "semibold" }),
+      ] },
+    ].concat(homeRows) } },
+    tab: { title: zh ? "行情" : "Markets", view: { type: "vstack", spacing: 6, children: page } },
   })
 }
