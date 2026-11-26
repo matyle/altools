@@ -191,6 +191,17 @@ enum SettingsCatalog {
                            }
                          })),
         ]),
+      ModuleSpec(
+        id: "plugins", name: "Plugins", symbol: "puzzlepiece.extension.fill", tint: Theme.accent,
+        tagline: "Extend Altools with scripts in any language: the notch, the menu bar, the launcher, selected text and hotkeys",
+        flow: "A folder with plugin.json and a script → it prints JSON → Altools shows it where the plugin asks",
+        enabled: bind(\.pluginsEnabled),
+        capabilities: [
+          CapabilitySpec(key: "installed", title: "Plugins",
+                         detail: "Make one with AI, browse the store, import a .altoolsplugin, and switch each plugin on. A plugin can put a widget on Home, its own notch tab, text beside the notch, alert cards, a menu-bar item, launcher commands and search, actions on selected text, and hotkeys.",
+                         value: "\(PluginHost.shared.plugins.filter(\.enabled).count) on",
+                         settings: AnyView(PluginSettingsView())),
+        ]),
     ]
     for index in modules.indices {
       for c in modules[index].capabilities.indices { modules[index].capabilities[c].moduleID = modules[index].id }
@@ -243,12 +254,6 @@ enum SettingsCatalog {
       CapabilitySpec(key: "input", title: "Input source & Caps Lock", detail: "Switching input source or Caps Lock flashes the new state.", toggle: cap("notch.input")),
       CapabilitySpec(key: "sensors", title: "Camera & microphone", detail: "Green while an app has the camera, orange with the app name while one records audio.", toggle: cap("notch.sensors")),
       CapabilitySpec(key: "downloads", title: "Finished downloads", detail: "When a download or AirDrop lands in Downloads, the notch shows the file.", toggle: cap("notch.downloads")),
-      CapabilitySpec(key: "ticker", title: "Crypto price",
-                     detail: "When nothing else is live, the ears show a live price and its 24h change, streamed from Binance's public market data through your proxy.",
-                     toggle: cap("notch.ticker"), value: settings.tickerSymbol,
-                     settings: AnyView(SettingsCard { SettingsRow("Trading pair", note: "Any Binance spot pair, e.g. BTCUSDT, ETHUSDT, SOLUSDT.") {
-                       SettingsTextField(text: Binding(get: { settings.tickerSymbol }, set: { settings.tickerSymbol = $0 }), prompt: "BTCUSDT")
-                     } })),
       CapabilitySpec(key: "receipts", title: "Receipts", detail: "Screenshots, picked colours and recognized text report in the notch instead of a toast.", toggle: cap("notch.receipts")),
       CapabilitySpec(key: "todo", title: "To-do", detail: "Your Reminders: overdue, today and the next 7 days; the input understands “tomorrow 3pm”.",
                      toggle: cap("notch.todo"), requirement: .reminders,
@@ -267,9 +272,6 @@ enum SettingsCatalog {
                          PillToggle(isOn: bind(\.claudeUsageConnected))
                        }
                      })),
-      CapabilitySpec(key: "markets", title: "Markets",
-                     detail: "A watchlist of crypto pairs, US and Hong Kong stocks, also shown on Home. Add or remove symbols in the tab; prices refresh every 15 s while the notch is open. Crypto comes from Binance through your proxy, stocks from Tencent's quote service.",
-                     toggle: cap("notch.markets"), value: "\(settings.marketWatchlist.count) symbols"),
     ]
   }
 }

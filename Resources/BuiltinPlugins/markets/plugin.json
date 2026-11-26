@@ -1,0 +1,52 @@
+{
+  "id": "markets",
+  "name": "Markets",
+  "version": "1.0.0",
+  "author": "Altools",
+  "description": "Crypto, US and Hong Kong stock prices: beside the notch, a Home widget, its own tab and optionally the menu bar; type “mk <name>” in the launcher to look any symbol up. Crypto from Binance (through your proxy), stocks from Tencent's public quotes.",
+  "api": 1,
+  "icon": "chart.line.uptrend.xyaxis",
+  "tint": "#98C379",
+  "run": "run.js",
+  "interval": 15,
+  "timeout": 20,
+  "slots": [
+    "ears",
+    "home",
+    "tab",
+    "menubar"
+  ],
+  "settings": [
+    {
+      "key": "watchlist",
+      "title": "Watchlist",
+      "type": "text",
+      "default": "BTC, ETH, AAPL, NVDA, 00700",
+      "note": "Names or codes, comma separated: BTC, SOLUSDT, 腾讯, Apple, AAPL, 00700. Prefix us: / hk: / crypto: to be exact."
+    },
+    {
+      "key": "ears",
+      "title": "Beside the notch",
+      "type": "choice",
+      "options": [
+        "First symbol",
+        "Off"
+      ],
+      "default": "First symbol"
+    },
+    {
+      "key": "menubar",
+      "title": "In the menu bar",
+      "type": "choice",
+      "options": [
+        "Off",
+        "First symbol"
+      ],
+      "default": "Off"
+    }
+  ],
+  "search": {
+    "keyword": "mk",
+    "placeholder": "Look up a coin or stock: mk sol, mk 腾讯, mk TSLA"
+  }
+}

@@ -36,9 +36,13 @@ public struct AIRequest: Sendable {
   public var toolPolicy: ToolPolicy
   /// Session to continue; only used in `agent` mode.
   public var resumeSessionID: String?
+  /// Claude tool patterns allowed on top of `toolPolicy` in agent mode, e.g. "Bash(python3:*)";
+  /// lets a task run specific commands without granting full access. Codex ignores it.
+  public var allowedTools: [String]
 
   public init(provider: AIProvider, mode: AIMode, prompt: String, systemPrompt: String? = nil,
-              model: String? = nil, toolPolicy: ToolPolicy = .readOnly, resumeSessionID: String? = nil) {
+              model: String? = nil, toolPolicy: ToolPolicy = .readOnly, resumeSessionID: String? = nil,
+              allowedTools: [String] = []) {
     self.provider = provider
     self.mode = mode
     self.prompt = prompt
@@ -46,6 +50,7 @@ public struct AIRequest: Sendable {
     self.model = model
     self.toolPolicy = toolPolicy
     self.resumeSessionID = resumeSessionID
+    self.allowedTools = allowedTools
   }
 }
 
@@ -80,6 +85,7 @@ public enum AICommand {
     case .full:
       args += ["--permission-mode", "bypassPermissions"]
     }
+    if r.mode == .agent, !r.allowedTools.isEmpty, policy != .full { args += ["--allowedTools"] + r.allowedTools }
     if r.mode == .agent, let session = r.resumeSessionID { args += ["--resume", session] }
     // "--" stops option parsing, so a prompt starting with "-" stays a prompt.
     args += ["--", r.prompt]

@@ -48,7 +48,6 @@ enum DebugRender {
                                         isPlaying: true, position: 98, duration: 243))
         model.reminders.loadDemo()
         model.usage.loadDemo()
-        model.markets.loadDemo()
         if let tab { model.tab = tab; model.expanded = true }
         setup(model)
         return AnyView(NotchView(model: model, actions: NotchActions()))
@@ -83,7 +82,6 @@ enum DebugRender {
       ("10c-notch-notes", CGSize(width: 760, height: 320), notch(.notes)),
       ("10d-notch-shelf", CGSize(width: 760, height: 320), notch(.shelf)),
       ("10e-notch-usage", CGSize(width: 760, height: 320), notch(.usage)),
-      ("10f-notch-markets", CGSize(width: 760, height: 320), notch(.markets)),
       ("11-notch-collapsed-playing", CGSize(width: 680, height: 80), notch(nil)),
       ("11b-notch-collapsed-meeting", CGSize(width: 680, height: 80), notch(nil) { $0.nowPlaying.loadDemo(.init(bundleID: "", title: "", artist: "", isPlaying: false, position: 0, duration: 0)) ; $0.reminders.loadDemo() }),
       ("11c-notch-collapsed-receipt", CGSize(width: 680, height: 80), notch(nil) { $0.loadDemoFlash(.receipt(.init(symbol: "eyedropper", title: "Copied #FF6B35", color: .orange))) }),
@@ -114,7 +112,7 @@ enum DebugRender {
     ]
   }
 
-  private static func render(_ makeView: () -> AnyView, size: CGSize, to url: URL) {
+  static func render(_ makeView: () -> AnyView, size: CGSize, to url: URL) {
     let backdrop = ZStack {
       LinearGradient(colors: [Color(red: 0.16, green: 0.2, blue: 0.36), Color(red: 0.42, green: 0.22, blue: 0.4)],
                      startPoint: .topLeading, endPoint: .bottomTrailing)

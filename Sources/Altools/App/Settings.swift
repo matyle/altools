@@ -26,6 +26,8 @@ final class AppSettings: ObservableObject {
   @Published var notchAllDisplays: Bool { didSet { save(notchAllDisplays, "notchAllDisplays") } }
   @Published var launcherEnabled: Bool { didSet { save(launcherEnabled, "launcherEnabled") } }
   @Published var widgetsEnabled: Bool { didSet { save(widgetsEnabled, "widgetsEnabled") } }
+  /// Plugins anywhere in Altools: notch, menu bar, launcher, selected text, hotkeys.
+  @Published var pluginsEnabled: Bool { didSet { save(pluginsEnabled, "pluginsEnabled") } }
   @Published var selectionEnabled: Bool { didSet { save(selectionEnabled, "selectionEnabled") } }
   @Published var captureEnabled: Bool { didSet { save(captureEnabled, "captureEnabled") } }
   /// Capability keys ("notch.volume", "launcher.web", …) the user switched off; everything else is on.
@@ -57,14 +59,10 @@ final class AppSettings: ObservableObject {
   @Published var notchHoverDelay: Double { didSet { save(notchHoverDelay, "notchHoverDelay") } }
   /// Read Now Playing for every player through the system bridge, not just Music and Spotify.
   @Published var notchSystemNowPlaying: Bool { didSet { save(notchSystemNowPlaying, "notchSystemNowPlaying") } }
-  /// Trading pair the notch shows when idle, e.g. BTCUSDT or ETHUSDT.
-  @Published var tickerSymbol: String { didSet { save(tickerSymbol, "tickerSymbol") } }
   /// Cards on the notch's Home tab, in order (HomeCard raw values).
   @Published var homeCards: [String] { didSet { save(homeCards, "homeCards") } }
   /// Buttons along the bottom of Home, in order (HomeAction raw values).
   @Published var homeActions: [String] { didSet { save(homeActions, "homeActions") } }
-  /// The Markets tab's watchlist, as "market:CODE" entries (crypto:BTCUSDT, us:AAPL, hk:00700).
-  @Published var marketWatchlist: [String] { didSet { save(marketWatchlist, "marketWatchlist") } }
   /// Empty means ~/Documents/Altools Notes.
   @Published var notesFolder: String { didSet { save(notesFolder, "notesFolder") } }
   /// Reminders list for new to-dos by name; empty or unmatched uses the default list.
@@ -89,6 +87,9 @@ final class AppSettings: ObservableObject {
     notchHoverDelay = defaults.object(forKey: "notchHoverDelay") as? Double ?? 0.2
     launcherEnabled = defaults.object(forKey: "launcherEnabled") as? Bool ?? true
     widgetsEnabled = defaults.object(forKey: "widgetsEnabled") as? Bool ?? true
+    // Plugins used to be a notch capability ("notch.plugins"); its off switch carries over.
+    pluginsEnabled = defaults.object(forKey: "pluginsEnabled") as? Bool
+      ?? !(defaults.stringArray(forKey: "disabledCapabilities") ?? []).contains("notch.plugins")
     selectionEnabled = defaults.object(forKey: "selectionEnabled") as? Bool ?? true
     captureEnabled = defaults.object(forKey: "captureEnabled") as? Bool ?? true
     disabledCapabilities = Set(defaults.stringArray(forKey: "disabledCapabilities") ?? [])
@@ -106,9 +107,7 @@ final class AppSettings: ObservableObject {
     notchDrawOnExternal = defaults.object(forKey: "notchDrawOnExternal") as? Bool ?? true
     notchSystemNowPlaying = defaults.object(forKey: "notchSystemNowPlaying") as? Bool ?? true
     notesFolder = defaults.string(forKey: "notesFolder") ?? ""
-    tickerSymbol = defaults.string(forKey: "tickerSymbol") ?? "BTCUSDT"
-    marketWatchlist = defaults.stringArray(forKey: "marketWatchlist") ?? MarketStore.defaultWatchlist
-    homeCards = defaults.stringArray(forKey: "homeCards") ?? HomeCard.defaults.map(\.rawValue)
+    homeCards = defaults.stringArray(forKey: "homeCards") ?? HomeSlot.defaults.map(\.rawValue)
     homeActions = defaults.stringArray(forKey: "homeActions") ?? HomeAction.defaults.map(\.rawValue)
     todoList = defaults.string(forKey: "todoList") ?? ""
     claudeUsageConnected = defaults.object(forKey: "claudeUsageConnected") as? Bool ?? false

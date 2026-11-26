@@ -1,0 +1,13 @@
+{
+  "id": "hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "author": "Altools",
+  "description": "The smallest plugin: the time beside the notch and one row for each kind of action.",
+  "api": 1,
+  "icon": "hand.wave.fill",
+  "tint": "#98C379",
+  "run": "run.sh",
+  "interval": 60,
+  "slots": ["ears", "home", "tab", "alerts"]
+}

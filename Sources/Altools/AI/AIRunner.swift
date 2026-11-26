@@ -141,7 +141,10 @@ final class AIRunner: ObservableObject {
 
   /// `showPrompt` false hides the prompt in the transcript (used by text actions,
   /// whose prompt is a long template the user did not type).
-  func send(_ prompt: String, mode: AIMode, systemPrompt: String? = nil, showPrompt: Bool = true) {
+  /// `workDirectory`, `toolPolicy` and `allowedTools` override Settings › AI for this call
+  /// (the plugin maker works inside the new plugin's folder and may run its script).
+  func send(_ prompt: String, mode: AIMode, systemPrompt: String? = nil, showPrompt: Bool = true,
+            workDirectory: String? = nil, toolPolicy: ToolPolicy? = nil, allowedTools: [String] = []) {
     cancel()
     let settings = AppSettings.shared
     let provider = settings.aiProvider
@@ -156,13 +159,14 @@ final class AIRunner: ObservableObject {
     // A session from the other provider cannot be resumed.
     let resume = (mode == .agent && sessionProvider == provider) ? sessionID : nil
     let request = AIRequest(provider: provider, mode: mode, prompt: prompt, systemPrompt: systemPrompt,
-                            model: settings.aiModel, toolPolicy: settings.toolPolicy, resumeSessionID: resume)
+                            model: settings.aiModel, toolPolicy: toolPolicy ?? settings.toolPolicy, resumeSessionID: resume,
+                            allowedTools: allowedTools)
 
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)
     process.arguments = AICommand.arguments(for: request)
     process.environment = CLILocator.environment(proxy: settings.proxy)
-    let workDir = (settings.workDirectory as NSString).expandingTildeInPath
+    let workDir = ((workDirectory ?? settings.workDirectory) as NSString).expandingTildeInPath
     process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.fileExists(atPath: workDir) ? workDir : NSHomeDirectory())
     process.standardInput = FileHandle.nullDevice
 

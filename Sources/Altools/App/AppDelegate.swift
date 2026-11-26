@@ -1,3 +1,4 @@
+import AltoolsCore
 import AppKit
 import Combine
 import ServiceManagement
@@ -12,6 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let notch = NotchController()
   private let hider = MenuBarHider()
   private let widgets = WidgetsController()
+  private let pluginMenuBar = PluginMenuBar()
+  private var pluginHotKeyIDs: [UInt32] = []
+  private var pluginHotKeySignature = ""
   private let selection = SelectionController()
   private var settingsWindow: NSWindow?
   private var cancellables: Set<AnyCancellable> = []
@@ -21,6 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
     if DebugRender.runIfRequested() { return }
     if DebugSelfTest.runIfRequested() { return }
+    if DebugPluginTest.runIfRequested() { return }
+    if DebugPluginShareTest.runIfRequested() { return }
+    if DebugPluginTest.importIfRequested() { return }
     #endif
     launcher = LauncherController(commands: { [weak self] in self?.launcherCommands() ?? [] })
     selection.askAI = { [weak self] text in
@@ -45,6 +52,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Turn modules on and off as their settings change.
     settings.$notchEnabled.removeDuplicates()
       .sink { [weak self] on in on ? self?.notch.start() : self?.notch.stop() }
+      .store(in: &cancellables)
+    // Plugins belong to all of Altools; the notch, menu bar, launcher and selection bar read them.
+    settings.$pluginsEnabled.removeDuplicates()
+      .sink { [weak self] on in
+        on ? PluginHost.shared.start() : PluginHost.shared.stop()
+        self?.pluginMenuBar.sync()
+        self?.syncPluginHotKeys()
+      }
+      .store(in: &cancellables)
+    PluginHost.shared.$plugins.receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.pluginMenuBar.sync()
+        self?.syncPluginHotKeys()
+      }
       .store(in: &cancellables)
     settings.$widgetsEnabled.removeDuplicates()
       .sink { [weak self] on in on ? self?.widgets.start() : self?.widgets.stop() }
@@ -160,11 +181,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self?.showSettings()
       },
       LauncherCommand(title: "Quit Altools", keywords: "exit", symbol: "power", tint: .gray) { NSApp.terminate(nil) },
-    ]
+    ] + pluginLauncherCommands(hide: { hide() })
+  }
+
+  // MARK: Plugins outside the notch
+
+  /// Each enabled plugin's `commands`, titled with the plugin's name, in its tint.
+  private func pluginLauncherCommands(hide: @escaping () -> Void) -> [LauncherCommand] {
+    guard settings.pluginsEnabled else { return [] }
+    return PluginHost.shared.plugins.filter { $0.enabled && $0.problem == nil }.flatMap { plugin in
+      (plugin.manifest?.commands ?? []).map { command in
+        LauncherCommand(title: command.title, keywords: "\(plugin.name) \(command.keywords ?? "")",
+                        symbol: command.icon ?? plugin.manifest?.icon ?? "puzzlepiece.extension.fill",
+                        tint: Color(pluginHex: plugin.manifest?.tint) ?? .orange) { [weak self] in
+          hide()
+          self?.runPluginCommand(plugin.id, command)
+        }
+      }
+    }
+  }
+
+  /// Runs a plugin command (from the launcher or its hotkey); a `result` is copied and shown.
+  private func runPluginCommand(_ pluginID: String, _ command: PluginCommand) {
+    Task { @MainActor in
+      guard let output = await PluginHost.shared.request(pluginID, event: .command(command.id)) else {
+        Toast.show("\(command.title) failed — see its log in Settings › Plugins", symbol: "exclamationmark.triangle.fill", duration: 2.5)
+        return
+      }
+      if let result = output.result {
+        Pasteboard.copy(result.text)
+        Toast.show("\(result.title ?? command.title): \(result.text.prefix(60)) — copied", symbol: "doc.on.clipboard", duration: 2.5)
+      }
+    }
+  }
+
+  /// Registers plugin command hotkeys, only when the set of them changes (plugin output updates often).
+  private func syncPluginHotKeys() {
+    let wanted: [(PluginHost.Plugin, PluginCommand, HotKeyCenter.Binding)] = settings.pluginsEnabled
+      ? PluginHost.shared.plugins.filter { $0.enabled && $0.problem == nil }.flatMap { plugin in
+          (plugin.manifest?.commands ?? []).compactMap { command in
+            command.hotkey.flatMap { HotKeyCenter.parse($0, title: "\(plugin.name): \(command.title)") }.map { (plugin, command, $0) }
+          }
+        }
+      : []
+    let signature = wanted.map { "\($0.0.id).\($0.1.id)=\($0.2.keyCode)/\($0.2.modifiers)" }.joined(separator: ",")
+    guard signature != pluginHotKeySignature else { return }
+    pluginHotKeySignature = signature
+    pluginHotKeyIDs.forEach(HotKeyCenter.shared.unregister)
+    pluginHotKeyIDs = wanted.compactMap { plugin, command, binding in
+      HotKeyCenter.shared.register(binding) { [weak self] in self?.runPluginCommand(plugin.id, command) }
+    }
   }
 
   /// `altools://selftest` runs the live desktop self-test (see LiveSelfTest).
   func application(_ application: NSApplication, open urls: [URL]) {
+    // A double-clicked .altoolsplugin, or an altools://install-plugin link.
+    var handled = false
+    for url in urls {
+      if url.isFileURL, url.pathExtension == PluginPackage.fileExtension {
+        PluginPackage.install(from: url, source: url.lastPathComponent)
+        handled = true
+      } else if PluginPackage.handle(url) {
+        handled = true
+      }
+    }
+    if handled { return }
     if urls.contains(where: { $0.host == "dump-notifications" }) {
       // Waits for a banner to be on screen, then writes its accessibility tree for inspection.
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {

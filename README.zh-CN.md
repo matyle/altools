@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文** · [主页：在浏览器里试用](https://matyle.github.io/altools/)
 
-一个原生的 macOS 菜单栏工具箱：带剪贴板历史和 AI 的启动器、划词操作、带标注和文字识别的截图、显示实时动态的刘海岛、菜单栏小组件，以及菜单栏图标隐藏。用 Swift 和 SwiftUI 编写，不是 Electron，也不需要注册账号。
+一个原生的 macOS 菜单栏工具箱：带剪贴板历史和 AI 的启动器、划词操作、带标注和文字识别的截图、显示实时动态的刘海岛、菜单栏小组件、菜单栏图标隐藏，以及可以用任何语言编写的插件。用 Swift 和 SwiftUI 编写，不是 Electron，也不需要注册账号。
 
 ![刘海主页](docs/screenshots/notch-home.png)
 
@@ -11,17 +11,36 @@
 ### 刘海岛
 鼠标停在刘海上（或按 ⌥N）会展开一个面板：正在播放、下一个会议和待办、行情自选、快捷操作。收起时，刘海两侧的"耳朵"显示当下正在发生的事：播放、会议倒计时、音量、充电、摄像头和麦克风占用、下载完成。
 
-- **标签页：** 主页、媒体、待办（提醒事项）、笔记（Markdown 文件）、暂存架（拖入文件）、AI 用量、行情。
+- **标签页：** 主页、媒体、待办（提醒事项）、笔记（Markdown 文件）、暂存架（拖入文件）、AI 用量，每个有页面的插件也各占一个。
 - **会议提醒：** 日历里的会议开始前一分钟，刘海弹出卡片，带倒计时和 **加入** 按钮，直接用 App 打开 Zoom、Teams 或腾讯会议（Google Meet 用浏览器打开）；开始前两侧耳朵一直倒计时。
 - **Agent 提醒：** [tuios](https://tuios.dev/) 里的 agent 需要你批准、有问题要问、出错或完成一轮时，刘海会弹出卡片；点一下直接跳到那个面板。
-- **行情：** 加密货币、美股、港股，可以按名称或代码添加。
 - **AI 用量：** Claude Code 套餐的 5 小时和每周额度，以及今天用掉的 token。
 - 没有刘海的显示器上可以画一个，也可以只在有动态时出现。
 
 | | |
 |---|---|
-| ![行情](docs/screenshots/notch-markets.png) | ![AI 用量](docs/screenshots/notch-ai-usage.png) |
-| ![会议提醒](docs/screenshots/notch-meeting-card.png) | ![Agent 卡片](docs/screenshots/notch-agent-card.png) |
+| ![AI 用量](docs/screenshots/notch-ai-usage.png) | ![会议提醒](docs/screenshots/notch-meeting-card.png) |
+| ![Agent 卡片](docs/screenshots/notch-agent-card.png) | |
+
+### 插件
+用一个文件夹加功能：里面放 `plugin.json` 和任意语言的脚本（shell、Python、macOS 自带的 JavaScript、编译好的程序都行）。Altools 运行它、把它输出的内容画出来；完整约定见 [插件指南](PLUGINS.zh-CN.md)。
+
+| 位置 | 插件可以加什么 |
+|---|---|
+| 刘海 | 刘海旁的简短状态、主页卡片、自己的标签页、提醒卡片 |
+| 菜单栏 | 自己的图标，点开是插件页面 |
+| 启动器 | 命令（每个都能设全局快捷键）和搜索关键词，比如 `tt`、`mk` |
+| 划词 | 划词工具条里的操作，结果可以替换选中的文字 |
+
+- **界面自己排：** 插件用一棵由堆叠、网格、卡片、文字、图标、徽标、进度条和走势线组成的树描述界面，像小组件一样原生绘制。也可以完全没有界面：常驻运行，有事时才弹卡片。
+- **分享：** 导出成 `.altoolsplugin` 文件、导入，或者从 GitHub 文件夹安装。设置 › 插件 › **插件商店** 里列出精选插件和所有打了 `altools-plugin` 标签的仓库。
+- **让 AI 来写：** 在 设置 › 插件 里描述需求，Claude Code 照着同一份指南写好。
+- **内置：** 行情。加密货币、美股、港股按名称或代码添加，带走势线、启动器搜索（`mk 腾讯`）和可选的菜单栏行情。
+- **示例：** [滴答清单 / TickTick](examples/plugins/ticktick)（查看今天的任务，用 `tt 明天下午3点 开会 #工作 !高` 或划词添加，点一下完成）、[文本工具](examples/plugins/text-tools)、[网站监控](examples/plugins/site-monitor)，以及 [更多](examples/plugins)。
+
+| | |
+|---|---|
+| ![行情插件](docs/screenshots/notch-markets.png) | ![滴答清单插件](docs/screenshots/notch-ticktick.png) |
 
 ### 启动器
 ⌥ Space 打开一个输入框，搜应用、命令、算式和剪贴板历史。按 ⇥ 通过你本机的 **Claude Code** 或 **Codex** CLI 提问，可以选择工具权限（无、只读、可改文件、完全）。
@@ -99,4 +118,5 @@ ALTOOLS_RENDER_DIR=/tmp/altools-render "$(swift build -c debug --show-bin-path)/
 - AI 请求走你本机已有的 Claude Code 或 Codex CLI，用它们自己的登录。
 - 剪贴板历史只存在本地，并跳过密码管理器标记为机密的内容。
 - 通知的文字只用来显示卡片，不会保存或发送。
-- 会发出的网络请求：行情（加密货币来自 Binance，股票来自腾讯公开行情接口）；连接 AI 用量后访问 Claude Code 的用量接口。
+- 会发出的网络请求：行情插件的报价（加密货币来自 Binance，股票来自腾讯公开行情接口和 Yahoo Finance）；连接 AI 用量后访问 Claude Code 的用量接口。
+- 插件在你的 Mac 上以你的权限运行，只发出它脚本里的请求；请只安装你信任的插件。插件的密钥类设置存在钥匙串里。

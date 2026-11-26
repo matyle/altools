@@ -1,0 +1,21 @@
+{
+  "id": "text-tools",
+  "name": "Text tools",
+  "version": "1.0.0",
+  "author": "Altools",
+  "description": "Plugins beyond the notch: actions on selected text, a launcher command with a hotkey, and a launcher search. No UI in the notch.",
+  "api": 1,
+  "icon": "textformat",
+  "tint": "#C678DD",
+  "run": "run.js",
+  "interval": 86400,
+  "slots": [],
+  "selection": [
+    { "id": "json", "title": "Format JSON", "icon": "curlybraces" },
+    { "id": "count", "title": "Count words", "icon": "number" }
+  ],
+  "commands": [
+    { "id": "uuid", "title": "Copy a new UUID", "icon": "number.square", "keywords": "uuid guid id", "hotkey": "ctrl+option+u" }
+  ],
+  "search": { "keyword": "b64", "placeholder": "Base64: b64 hello, or b64 aGVsbG8=" }
+}

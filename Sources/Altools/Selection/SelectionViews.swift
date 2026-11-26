@@ -12,12 +12,21 @@ final class SelectionResultModel: ObservableObject {
   @Published var canReplace = false
 }
 
+/// A plugin's selected-text action, listed in the bar's ⋯ menu.
+struct SelectionPluginAction: Identifiable {
+  let id: String
+  let title: String
+  let icon: String
+  let run: () -> Void
+}
+
 struct SelectionBar: View {
   let onCopy: () -> Void
   let onSearch: () -> Void
   let onAI: (SelectionController.AIAction) -> Void
   let onAsk: () -> Void
   let onTransform: (TextTransform) -> Void
+  var pluginActions: [SelectionPluginAction] = []
 
   var body: some View {
     HStack(spacing: 0) {
@@ -34,6 +43,12 @@ struct SelectionBar: View {
         Divider()
         ForEach(TextTransform.allCases) { transform in
           Button(transform.title) { onTransform(transform) }
+        }
+        if !pluginActions.isEmpty {
+          Divider()
+          ForEach(pluginActions) { action in
+            Button(action.title, systemImage: action.icon, action: action.run)
+          }
         }
       } label: {
         Image(systemName: "ellipsis").font(.system(size: 13, weight: .semibold))

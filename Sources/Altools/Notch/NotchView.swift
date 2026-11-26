@@ -1,3 +1,4 @@
+import AltoolsCore
 import SwiftUI
 
 /// Black shape hanging from the top edge: flat top, rounded bottom corners.
@@ -83,7 +84,7 @@ struct NotchView: View {
     case .sensors: "sensors"
     case .ai: "ai"
     case .music: "music"
-    case .ticker: "ticker"
+    case .plugin(let id, _): "plugin-\(id)"
     }
   }
 }
@@ -155,12 +156,13 @@ private struct Ears: View {
     case .ai:
       Image(systemName: "sparkles").foregroundStyle(.purple)
         .symbolEffect(.pulse, options: .repeating)
-    case .ticker(let quote):
-      // Bitcoin gets its symbol alone; other pairs show their short name.
-      if CryptoTicker.base(of: quote.symbol) == "BTC" {
-        Image(systemName: "bitcoinsign.circle.fill").foregroundStyle(.orange)
+    case .plugin(let id, let ears):
+      let plugin = PluginHost.shared.plugins.first { $0.id == id }
+      if let left = ears.left {
+        PluginNodeView(node: left, pluginID: id, folder: plugin?.folder, accent: Color(pluginHex: plugin?.manifest?.tint) ?? .orange)
       } else {
-        Text(CryptoTicker.base(of: quote.symbol)).foregroundStyle(.orange)
+        Image(systemName: ears.symbol ?? plugin?.manifest?.icon ?? "puzzlepiece.extension.fill")
+          .foregroundStyle(Color(pluginHex: ears.tint ?? plugin?.manifest?.tint) ?? .orange)
       }
     case .music:
       Group {
@@ -208,15 +210,12 @@ private struct Ears: View {
       }
     case .ai:
       ProgressView().controlSize(.mini).tint(.white)
-    case .ticker(let quote):
-      VStack(alignment: .trailing, spacing: -1) {
-        Text(CryptoTicker.format(quote.price))
-          .monospacedDigit()
-          .contentTransition(.numericText(value: quote.price))
-          .animation(.snappy, value: quote.price)
-        Text(String(format: "%@%.2f%%", quote.change >= 0 ? "+" : "", quote.change))
-          .font(.system(size: 8, weight: .semibold).monospacedDigit())
-          .foregroundStyle(quote.change >= 0 ? Color.green : Color.red)
+    case .plugin(let id, let ears):
+      if let right = ears.right {
+        let plugin = PluginHost.shared.plugins.first { $0.id == id }
+        PluginNodeView(node: right, pluginID: id, folder: plugin?.folder, accent: Color(pluginHex: plugin?.manifest?.tint) ?? .orange)
+      } else {
+        Text(ears.text ?? "").foregroundStyle(Color(pluginHex: ears.tint) ?? .white).monospacedDigit()
       }
     case .music:
       Image(systemName: "waveform")
@@ -250,6 +249,9 @@ private struct ExpandedNotch: View {
         ForEach(model.tabs) { tab in
           tabButton(tab).help(tab.title)
         }
+        ForEach(model.pluginTabs) { plugin in
+          pluginTabButton(plugin).help(plugin.name)
+        }
         Spacer(minLength: 8)
         BatteryBadge(battery: model.battery)
         Button { model.pinned.toggle() } label: {
@@ -269,12 +271,33 @@ private struct ExpandedNotch: View {
         case .notes: NotesTab(notes: model.notes)
         case .shelf: ShelfTab(shelf: model.shelf, actions: actions)
         case .usage: UsageTab(usage: model.usage)
-        case .markets: MarketsTab(markets: model.markets)
+        case .plugins:
+          if let plugin = model.openPlugin { PluginPage(plugin: plugin) } else { HomeTab(model: model, nowPlaying: model.nowPlaying, reminders: model.reminders, actions: actions) }
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
     .foregroundStyle(.white)
+  }
+
+  private func pluginTabButton(_ plugin: PluginHost.Plugin) -> some View {
+    let selected = model.tab == .plugins && model.pluginTab == plugin.id
+    return Button {
+      withAnimation(.snappy) {
+        model.pluginTab = plugin.id
+        model.tab = .plugins
+      }
+    } label: {
+      HStack(spacing: 5) {
+        Image(systemName: plugin.manifest?.icon ?? "puzzlepiece.extension.fill").font(.system(size: 11, weight: .semibold))
+        if selected { Text(plugin.output?.tab?.title ?? plugin.name).font(.system(size: 12, weight: .semibold)).lineLimit(1) }
+      }
+      .foregroundStyle(selected ? Color.white : Color.white.opacity(0.45))
+      .padding(.horizontal, selected ? 9 : 7).frame(height: 22)
+      .background(selected ? Color.white.opacity(0.14) : .clear, in: Capsule())
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
   }
 
   private func tabButton(_ tab: NotchModel.Tab) -> some View {
@@ -369,6 +392,7 @@ private struct CardView: View {
       case .meeting(let meeting, let startingNow): meetingCard(meeting, startingNow: startingNow)
       case .notification(let banner): notificationCard(banner)
       case .agent(let item): agentCard(item)
+      case .plugin(let id, let alert): PluginAlertCard(pluginID: id, alert: alert, dismiss: dismiss)
       }
       Button(action: dismiss) {
         Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.5))
