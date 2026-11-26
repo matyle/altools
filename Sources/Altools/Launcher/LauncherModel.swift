@@ -53,7 +53,11 @@ final class LauncherModel: ObservableObject {
 
   var selectedItem: LauncherItem? { items.indices.contains(selection) ? items[selection] : nil }
 
+  /// Bumped on every open; the view puts the caret back in the field when it changes.
+  @Published private(set) var focusRequest = 0
+
   func open(in newMode: Mode) {
+    focusRequest += 1
     if newMode == .ai, mode == .ai { return }
     mode = newMode
     query = ""

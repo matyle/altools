@@ -21,6 +21,12 @@ struct LauncherView: View {
     .panelBackground(cornerRadius: 18)
     .onAppear { fieldFocused = true }
     .onChange(of: model.mode) { _, _ in fieldFocused = true }
+    // Reopening keeps the same view, so onAppear doesn't run again and the field would stay
+    // unfocused; cycling the value makes SwiftUI focus it once the panel is key.
+    .onChange(of: model.focusRequest) { _, _ in
+      fieldFocused = false
+      DispatchQueue.main.async { fieldFocused = true }
+    }
   }
 
   private var header: some View {
