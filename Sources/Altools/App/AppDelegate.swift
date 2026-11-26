@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
     if DebugRender.runIfRequested() { return }
     if DebugSelfTest.runIfRequested() { return }
+    if DebugPluginTest.runIfRequested() { return }
     #endif
     launcher = LauncherController(commands: { [weak self] in self?.launcherCommands() ?? [] })
     selection.askAI = { [weak self] text in

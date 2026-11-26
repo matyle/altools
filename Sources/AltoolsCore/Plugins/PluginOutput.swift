@@ -22,21 +22,42 @@ public struct PluginOutput: Equatable, Sendable {
     public var symbol: String?
     public var text: String
     public var tint: String?
+
+    public init(symbol: String? = nil, text: String, tint: String? = nil) {
+      self.symbol = symbol
+      self.text = text
+      self.tint = tint
+    }
   }
 
   public struct Card: Equatable, Sendable {
     public var title: String?
     public var rows: [Row]
+
+    public init(title: String? = nil, rows: [Row]) {
+      self.title = title
+      self.rows = rows
+    }
   }
 
   public struct Page: Equatable, Sendable {
     public var title: String?
     public var sections: [Section]
+
+    public init(title: String? = nil, sections: [Section]) {
+      self.title = title
+      self.sections = sections
+    }
   }
 
   public struct Section: Equatable, Sendable {
     public var title: String?
     public var rows: [Row]
+
+    public init(title: String? = nil, rows: [Row]) {
+      self.title = title
+      self.rows = rows
+    }
   }
 
   public struct Row: Equatable, Sendable {
@@ -47,6 +68,15 @@ public struct PluginOutput: Equatable, Sendable {
     /// Short text on the right, e.g. a time or a number.
     public var value: String?
     public var action: PluginAction?
+
+    public init(title: String, subtitle: String? = nil, symbol: String? = nil, tint: String? = nil, value: String? = nil, action: PluginAction? = nil) {
+      self.title = title
+      self.subtitle = subtitle
+      self.symbol = symbol
+      self.tint = tint
+      self.value = value
+      self.action = action
+    }
   }
 
   public struct Alert: Equatable, Sendable {
@@ -57,6 +87,15 @@ public struct PluginOutput: Equatable, Sendable {
     public var symbol: String?
     public var tint: String?
     public var action: PluginAction?
+
+    public init(id: String, title: String, body: String? = nil, symbol: String? = nil, tint: String? = nil, action: PluginAction? = nil) {
+      self.id = id
+      self.title = title
+      self.body = body
+      self.symbol = symbol
+      self.tint = tint
+      self.action = action
+    }
   }
 
   /// Parses stdout. Unknown fields are ignored; a malformed part is dropped rather than

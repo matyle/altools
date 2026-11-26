@@ -114,7 +114,7 @@ enum DebugRender {
     ]
   }
 
-  private static func render(_ makeView: () -> AnyView, size: CGSize, to url: URL) {
+  static func render(_ makeView: () -> AnyView, size: CGSize, to url: URL) {
     let backdrop = ZStack {
       LinearGradient(colors: [Color(red: 0.16, green: 0.2, blue: 0.36), Color(red: 0.42, green: 0.22, blue: 0.4)],
                      startPoint: .topLeading, endPoint: .bottomTrailing)

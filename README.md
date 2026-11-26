@@ -16,6 +16,7 @@ Hover the notch (or press ⌥N) for a panel with now playing, your next meeting 
 - **Agent alerts:** when an agent in a [tuios](https://tuios.dev/) pane needs approval, has a question, errors or finishes, a card drops from the notch; click it to jump to that pane.
 - **Markets:** crypto pairs, US and Hong Kong stocks; add them by name or code.
 - **AI usage:** Claude Code's 5-hour and weekly plan quotas, and tokens used today.
+- **Plugins:** put your own information in the notch (beside it, on Home, in a Plugins tab, as alert cards) with a folder holding `plugin.json` and a script in any language. Describe one and Claude Code writes it for you, or see the [plugin guide](PLUGINS.md) and [examples](examples/plugins) such as TickTick / 滴答清单.
 - On displays without a notch it can draw one, or show only while something is live.
 
 | | |
