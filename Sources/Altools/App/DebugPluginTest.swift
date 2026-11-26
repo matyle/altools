@@ -74,6 +74,9 @@ enum DebugPluginTest {
         print("COMMAND result=\(command?.result?.text.count ?? 0) chars")
         print("SELECTION replace=\(selection?.result?.replace ?? false) text=\(selection?.result?.text.replacingOccurrences(of: "\n", with: " ") ?? "-")")
         print("SEARCH b64=\(search?.results.map(\.title) ?? []) mk=\(quote?.results.map(\.title) ?? [])")
+        let tick = await host.request("ticktick", event: .search, input: "明天下午3点 开会 #work !high")
+        let tickAdd = await host.request("ticktick", event: .selection("add"), input: "Review PR tomorrow\nnotes")
+        print("TICKTICK search=\(tick?.results.map { "\($0.title) | \($0.subtitle ?? "")" } ?? []) selection=\(tickAdd?.result?.text ?? "-")")
         let match = host.searchProvider(for: "b64 hello")
         print("PROVIDER \(match?.plugin.id ?? "-") input=\(match?.input ?? "-")")
         let keys = ["⌥⇧T", "ctrl+option+u", "cmd+k", "T", "hyper+x"].map { HotKeyCenter.parse($0, title: "t")?.display ?? "nil" }
@@ -106,6 +109,7 @@ enum DebugPluginTest {
       let scenes: [(String, CGSize, () -> AnyView)] = [
         ("plugin-home", CGSize(width: 760, height: 320), notch { $0.tab = .home; $0.expanded = true }),
         ("plugin-tab", CGSize(width: 760, height: 320), notch { $0.pluginTab = "markets"; $0.tab = .plugins; $0.expanded = true }),
+        ("plugin-tab-ticktick", CGSize(width: 760, height: 380), notch { $0.pluginTab = "ticktick"; $0.tab = .plugins; $0.expanded = true }),
         ("plugin-tab-hello", CGSize(width: 760, height: 320), notch { $0.pluginTab = "hello"; $0.tab = .plugins; $0.expanded = true }),
         ("plugin-alert", CGSize(width: 680, height: 140), notch {
           $0.card = .plugin(id: "hello", alert: PluginOutput.Alert(id: "x", title: "Hello from a plugin", body: "Shown once a day. Edit run.sh to change me.", symbol: nil, tint: nil, action: nil))
