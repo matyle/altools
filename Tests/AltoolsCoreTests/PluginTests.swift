@@ -78,6 +78,7 @@ import Testing
      "next": 60}
     """)
     #expect(o.ears == PluginOutput.Ears(symbol: "checklist", text: "3", tint: nil))
+    #expect(o.ears?.sideWidth == 44)
     #expect(o.home?.rows.first?.action == .open(URL(string: "https://example.com")!))
     #expect(o.tab?.sections.count == 2)
     #expect(o.tab?.sections.first?.title == nil)
@@ -168,6 +169,16 @@ import Testing
     let many = "[" + Array(repeating: #"{"type": "spacer"}"#, count: 1_000).joined(separator: ",") + "]"
     guard case .stack(_, _, _, let children, _) = node(#"{"type": "vstack", "children": "# + many + "}") else { Issue.record("stack"); return }
     #expect(children.count == PluginNode.maximumNodes - 1)
+  }
+
+  @Test func earsTakeViewsAndAWidth() throws {
+    let o = try PluginOutput.decode(Data(#"{"ears": {"left": {"type": "symbol", "name": "bitcoinsign.circle.fill"}, "right": {"type": "text", "text": "60794"}, "width": 999}}"#.utf8))
+    #expect(o.ears?.left == .symbol("bitcoinsign.circle.fill", size: nil, color: nil, style: .init()))
+    #expect(o.ears?.text == nil)
+    #expect(o.ears?.sideWidth == 140)
+    #expect(try PluginOutput.decode(Data(#"{"ears": {"right": {"type": "divider"}}}"#.utf8)).ears?.sideWidth == 64)
+    let long = try PluginOutput.decode(Data(#"{"ears": {"text": "BTC 60794"}}"#.utf8))
+    #expect(long.ears!.sideWidth > 64)
   }
 
   @Test func outputCarriesViews() throws {

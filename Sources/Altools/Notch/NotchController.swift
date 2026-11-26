@@ -71,7 +71,7 @@ final class NotchModel: ObservableObject {
       case .sensors(let s): s.microphoneApp != nil ? 80 : 36
       case .ai: 36
       case .music: 36
-      case .plugin: 64
+      case .plugin(_, let ears): CGFloat(ears.sideWidth)
       }
     }
   }

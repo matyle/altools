@@ -157,8 +157,13 @@ private struct Ears: View {
       Image(systemName: "sparkles").foregroundStyle(.purple)
         .symbolEffect(.pulse, options: .repeating)
     case .plugin(let id, let ears):
-      Image(systemName: ears.symbol ?? PluginHost.shared.plugins.first { $0.id == id }?.manifest?.icon ?? "puzzlepiece.extension.fill")
-        .foregroundStyle(Color(pluginHex: ears.tint ?? PluginHost.shared.plugins.first { $0.id == id }?.manifest?.tint) ?? .orange)
+      let plugin = PluginHost.shared.plugins.first { $0.id == id }
+      if let left = ears.left {
+        PluginNodeView(node: left, pluginID: id, folder: plugin?.folder, accent: Color(pluginHex: plugin?.manifest?.tint) ?? .orange)
+      } else {
+        Image(systemName: ears.symbol ?? plugin?.manifest?.icon ?? "puzzlepiece.extension.fill")
+          .foregroundStyle(Color(pluginHex: ears.tint ?? plugin?.manifest?.tint) ?? .orange)
+      }
     case .music:
       Group {
         if let art = model.nowPlaying.artwork {
@@ -205,8 +210,13 @@ private struct Ears: View {
       }
     case .ai:
       ProgressView().controlSize(.mini).tint(.white)
-    case .plugin(_, let ears):
-      Text(ears.text).foregroundStyle(Color(pluginHex: ears.tint) ?? .white).monospacedDigit()
+    case .plugin(let id, let ears):
+      if let right = ears.right {
+        let plugin = PluginHost.shared.plugins.first { $0.id == id }
+        PluginNodeView(node: right, pluginID: id, folder: plugin?.folder, accent: Color(pluginHex: plugin?.manifest?.tint) ?? .orange)
+      } else {
+        Text(ears.text ?? "").foregroundStyle(Color(pluginHex: ears.tint) ?? .white).monospacedDigit()
+      }
     case .music:
       Image(systemName: "waveform")
         .foregroundStyle(.orange)

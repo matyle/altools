@@ -88,7 +88,6 @@ enum DebugPluginTest {
         }
       }
       let scenes: [(String, CGSize, () -> AnyView)] = [
-        ("plugin-ears", CGSize(width: 680, height: 80), notch { _ in }),
         ("plugin-home", CGSize(width: 760, height: 320), notch { $0.tab = .home; $0.expanded = true }),
         ("plugin-tab", CGSize(width: 760, height: 320), notch { $0.pluginTab = "markets"; $0.tab = .plugins; $0.expanded = true }),
         ("plugin-tab-hello", CGSize(width: 760, height: 320), notch { $0.pluginTab = "hello"; $0.tab = .plugins; $0.expanded = true }),
@@ -96,6 +95,8 @@ enum DebugPluginTest {
           $0.card = .plugin(id: "hello", alert: PluginOutput.Alert(id: "x", title: "Hello from a plugin", body: "Shown once a day. Edit run.sh to change me.", symbol: nil, tint: nil, action: nil))
         }),
         ("plugin-settings", CGSize(width: 1100, height: 900), { AnyView(SettingsRoot(actions: SettingsActions(), page: .module("notch"))) }),
+        // Last: hello and ticktick off so the Markets ears show.
+        ("plugin-ears", CGSize(width: 680, height: 80), notch { _ in for id in ["hello", "ticktick"] { PluginHost.shared.setEnabled(id, false) } }),
       ]
       var delay = 0.5
       for (name, size, view) in scenes {

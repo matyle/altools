@@ -89,6 +89,11 @@ const pageURL = i => i.market === "crypto" ? "https://www.binance.com/en/trade/"
 const yahooHK = code => String(+code).padStart(4, "0") + ".HK"
 const badge = { crypto: zh ? "币" : "Crypto", us: zh ? "美股" : "US", hk: zh ? "港股" : "HK" }
 const short = code => code.replace(/USDT$/, "")
+const COIN_NAMES = { BTC: ["Bitcoin", "比特币"], ETH: ["Ethereum", "以太坊"], SOL: ["Solana", "Solana"], BNB: ["BNB", "币安币"],
+  XRP: ["XRP", "瑞波币"], DOGE: ["Dogecoin", "狗狗币"], ADA: ["Cardano", "艾达币"], TRX: ["TRON", "波场"], LTC: ["Litecoin", "莱特币"],
+  DOT: ["Polkadot", "波卡"], LINK: ["Chainlink", "Chainlink"], AVAX: ["Avalanche", "雪崩"], SHIB: ["Shiba Inu", "柴犬币"],
+  TON: ["Toncoin", "Toncoin"], SUI: ["Sui", "Sui"], PEPE: ["Pepe", "Pepe"] }
+const coinName = code => { const n = COIN_NAMES[short(code)]; return n ? n[zh ? 1 : 0] : "" }
 
 // Recent prices for the sparkline: 24 hourly closes (Binance) or a month of daily closes (Yahoo).
 // Cached for 10 minutes so the 15-second refresh doesn't refetch them.
@@ -131,7 +136,8 @@ function run() {
   const prices = quotes(list)
   const quotesList = list.map(i => {
     const p = prices[i.market + ":" + i.code]
-    return { item: i, price: p, name: p && p.name ? p.name : i.name, color: p ? (p.change >= 0 ? "green" : "red") : "tertiary" }
+    const name = i.market === "crypto" ? coinName(i.code) : (p && p.name ? p.name : i.name)
+    return { item: i, price: p, name, color: p ? (p.change >= 0 ? "green" : "red") : "tertiary" }
   })
 
   // Home: code on the left, price over the coloured change on the right.
@@ -157,17 +163,18 @@ function run() {
         text(price ? fmt(price.price) : "—", { size: 12, weight: "semibold", mono: true }),
       ] },
       { type: "hstack", children: [
-        text(name !== item.code ? name : "", { size: 10, color: "tertiary", lines: 1 }),
+        text(name && name !== item.code ? name : badge[item.market], { size: 10, color: "tertiary", lines: 1 }),
         { type: "spacer" },
         text(price ? pct(price.change) : "", { size: 10, weight: "semibold", color, mono: true }),
       ] },
     ]
-    if (values.length >= 2) children.push({ type: "sparkline", values, color: price ? color : "tertiary", height: 22 })
-    return { type: "card", padding: 9, action: { open: pageURL(item) }, children }
+    if (values.length >= 2) children.push({ type: "sparkline", values, color: price ? color : "tertiary", height: 12 })
+    return { type: "card", padding: 8, action: { open: pageURL(item) }, children }
   })
   writeJSON(historyPath, historyCache)
 
-  const page = [{ type: "grid", columns: 2, spacing: 6, children: cards }]
+  // Two rows of cards fit the open notch; more scroll.
+  const page = [{ type: "grid", columns: cards.length > 4 ? 3 : 2, spacing: 5, children: cards }]
   if (unknown.length) {
     page.push(text((zh ? "找不到：" : "Not found: ") + unknown.join(", ") + (zh ? "（检查拼写，或加上 us: / hk: / crypto:）" : " (check the spelling, or add us: / hk: / crypto:)"),
       { size: 10, color: "orange" }))
@@ -175,9 +182,19 @@ function run() {
 
   const first = quotesList.find(q => q.price)
   const earsOn = (getenv("ALTOOLS_SETTING_EARS") || "First symbol") !== "Off"
+  // Ears like the old ticker: the coin on the left (₿ for Bitcoin), price over change on the right.
+  const ears = earsOn && first ? {
+    width: 62,
+    left: short(first.item.code) === "BTC"
+      ? { type: "symbol", name: "bitcoinsign.circle.fill", size: 14, color: "orange" }
+      : text(first.item.market === "crypto" ? short(first.item.code) : first.item.code, { size: 11, weight: "bold", color: "orange", lines: 1 }),
+    right: { type: "vstack", align: "trailing", spacing: 0, children: [
+      text(fmt(first.price.price), { size: 11, weight: "semibold", mono: true, lines: 1 }),
+      text(pct(first.price.change), { size: 9, weight: "semibold", mono: true, color: first.color }),
+    ] },
+  } : undefined
   return JSON.stringify({
-    ears: earsOn && first ? { symbol: first.price.change >= 0 ? "arrow.up.right" : "arrow.down.right",
-      text: short(first.item.code) + " " + fmt(first.price.price), tint: first.price.change >= 0 ? "#98C379" : "#E06C75" } : undefined,
+    ears,
     home: { view: { type: "vstack", spacing: 5, children: [
       { type: "hstack", spacing: 5, children: [
         { type: "symbol", name: "chart.line.uptrend.xyaxis", size: 10, color: "green" },

@@ -18,15 +18,33 @@ public struct PluginOutput: Equatable, Sendable {
     self.next = next
   }
 
+  /// The two sides of the notch. Either the simple form (`symbol` on the left, `text` on the right)
+  /// or views for `left` / `right`; views win when both are given.
   public struct Ears: Equatable, Sendable {
     public var symbol: String?
-    public var text: String
+    public var text: String?
     public var tint: String?
+    public var left: PluginNode?
+    public var right: PluginNode?
+    /// Points per side, 30–140; nil sizes the simple form to its text and views to 64.
+    public var width: Double?
 
-    public init(symbol: String? = nil, text: String, tint: String? = nil) {
+    public init(symbol: String? = nil, text: String? = nil, tint: String? = nil,
+                left: PluginNode? = nil, right: PluginNode? = nil, width: Double? = nil) {
       self.symbol = symbol
       self.text = text
       self.tint = tint
+      self.left = left
+      self.right = right
+      self.width = width
+    }
+
+    /// Width of each side: the given width, 64 for views, or enough for the text.
+    public var sideWidth: Double {
+      if let width { return width }
+      if left != nil || right != nil { return 64 }
+      let characters = Double((text ?? "").count)
+      return min(max(30 + characters * 6.8, 44), 140)
     }
   }
 
@@ -123,8 +141,11 @@ public struct PluginOutput: Equatable, Sendable {
   }
 
   private static func ears(_ o: [String: Any]) -> Ears? {
-    guard let text = string(o["text"]) else { return nil }
-    return Ears(symbol: string(o["symbol"]), text: String(text.prefix(24)), tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex))
+    let left = PluginNode.decode(o["left"]), right = PluginNode.decode(o["right"])
+    let text = string(o["text"]).map { String($0.prefix(24)) }
+    guard text != nil || left != nil || right != nil else { return nil }
+    return Ears(symbol: string(o["symbol"]), text: text, tint: string(o["tint"]).flatMap(PluginManifest.normalizedHex),
+                left: left, right: right, width: number(o["width"]).map { min(max($0, 30), 140) })
   }
 
   private static func card(_ o: [String: Any]) -> Card {

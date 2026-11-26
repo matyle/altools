@@ -108,7 +108,7 @@ Every part is optional, and parts for slots not listed in `slots` are ignored.
 
 | Part | Shown |
 |---|---|
-| `ears` | Beside the notch while nothing more important (a meeting, music, an agent) is live. `text` is cut to 24 characters. |
+| `ears` | Beside the notch while nothing more important (a meeting, music, an agent) is live. Simple form: `symbol` on the left, `text` (up to 24 characters) on the right; each side grows with the text. Or `left` and `right` as [views](#views-your-own-layout) with an optional `width` per side (30–140, default 64), e.g. a coin icon left and price over change right. |
 | `home` | A widget on Home: your own `view`, or `title` + the first three `rows`. The user places it under Settings › Notch › Home layout; it shares the row's width. |
 | `tab` | The plugin's own tab in the notch's tab row (its `icon`; its `title` when open): a `view`, or `sections` / `rows`. |
 | `alerts` | Cards that drop from the notch. Each `id` is shown once, ever, so repeat it freely. |
