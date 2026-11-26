@@ -1,3 +1,4 @@
+import AltoolsCore
 import SwiftUI
 
 /// Black shape hanging from the top edge: flat top, rounded bottom corners.
@@ -84,6 +85,7 @@ struct NotchView: View {
     case .ai: "ai"
     case .music: "music"
     case .ticker: "ticker"
+    case .plugin(let id, _): "plugin-\(id)"
     }
   }
 }
@@ -155,6 +157,9 @@ private struct Ears: View {
     case .ai:
       Image(systemName: "sparkles").foregroundStyle(.purple)
         .symbolEffect(.pulse, options: .repeating)
+    case .plugin(let id, let ears):
+      Image(systemName: ears.symbol ?? PluginHost.shared.plugins.first { $0.id == id }?.manifest?.icon ?? "puzzlepiece.extension.fill")
+        .foregroundStyle(Color(pluginHex: ears.tint ?? PluginHost.shared.plugins.first { $0.id == id }?.manifest?.tint) ?? .orange)
     case .ticker(let quote):
       // Bitcoin gets its symbol alone; other pairs show their short name.
       if CryptoTicker.base(of: quote.symbol) == "BTC" {
@@ -208,6 +213,8 @@ private struct Ears: View {
       }
     case .ai:
       ProgressView().controlSize(.mini).tint(.white)
+    case .plugin(_, let ears):
+      Text(ears.text).foregroundStyle(Color(pluginHex: ears.tint) ?? .white).monospacedDigit()
     case .ticker(let quote):
       VStack(alignment: .trailing, spacing: -1) {
         Text(CryptoTicker.format(quote.price))
@@ -270,6 +277,7 @@ private struct ExpandedNotch: View {
         case .shelf: ShelfTab(shelf: model.shelf, actions: actions)
         case .usage: UsageTab(usage: model.usage)
         case .markets: MarketsTab(markets: model.markets)
+        case .plugins: PluginsTab(host: model.plugins)
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -369,6 +377,7 @@ private struct CardView: View {
       case .meeting(let meeting, let startingNow): meetingCard(meeting, startingNow: startingNow)
       case .notification(let banner): notificationCard(banner)
       case .agent(let item): agentCard(item)
+      case .plugin(let id, let alert): PluginAlertCard(pluginID: id, alert: alert, dismiss: dismiss)
       }
       Button(action: dismiss) {
         Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.5))

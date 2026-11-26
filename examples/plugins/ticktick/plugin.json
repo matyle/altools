@@ -1,0 +1,19 @@
+{
+  "id": "ticktick",
+  "name": "TickTick",
+  "version": "1.0.0",
+  "author": "Altools",
+  "description": "Tasks due today and overdue from TickTick / 滴答清单, with a click to complete them.",
+  "api": 1,
+  "icon": "checklist",
+  "tint": "#E5C07B",
+  "run": "run.py",
+  "interval": 300,
+  "timeout": 25,
+  "slots": ["ears", "home", "tab", "alerts"],
+  "settings": [
+    { "key": "token", "title": "Access token", "type": "secret", "note": "See examples/plugins/ticktick/README.md for how to get one." },
+    { "key": "region", "title": "Service", "type": "choice", "options": ["dida365.com", "ticktick.com"], "default": "dida365.com" },
+    { "key": "alerts", "title": "Alert 10 minutes before a task is due", "type": "toggle", "default": true }
+  ]
+}

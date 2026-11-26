@@ -7,11 +7,12 @@ struct HomeTab: View {
   let actions: NotchActions
 
   @ObservedObject private var settings = AppSettings.shared
+  @ObservedObject private var plugins = PluginHost.shared
 
   var body: some View {
     VStack(spacing: 6) {
       HStack(spacing: 6) {
-        let cards = visibleCards
+        let cards = visibleSlots
         // Without a flexible card (Calendar & to-dos), the fixed ones share the width.
         let stretch = !cards.contains { $0.width == nil }
         ForEach(cards) { card in
@@ -31,25 +32,33 @@ struct HomeTab: View {
     }
   }
 
-  private var visibleCards: [HomeCard] {
-    settings.homeCardList.filter { card in card.capability.map(settings.isOn) ?? true }
-  }
-
-  @ViewBuilder private func content(for card: HomeCard) -> some View {
-    switch card {
-    case .media: mediaCard
-    case .agenda: agenda
-    case .markets: MarketsSummary(markets: model.markets)
-    case .usage: UsageSummary(usage: model.usage)
+  private var visibleSlots: [HomeSlot] {
+    settings.homeSlotList.filter { slot in
+      switch slot {
+      case .builtin(let card): card.capability.map(settings.isOn) ?? true
+      case .plugin(let id): settings.isOn("notch.plugins") && plugins.plugins.contains { $0.id == id && $0.enabled && $0.manifest?.slots.contains(.home) == true }
+      }
     }
   }
 
-  private func open(_ card: HomeCard) {
-    let tab: NotchModel.Tab? = switch card {
-    case .media: .media
-    case .markets: .markets
-    case .usage: .usage
-    case .agenda: nil
+  @ViewBuilder private func content(for slot: HomeSlot) -> some View {
+    switch slot {
+    case .builtin(.media): mediaCard
+    case .builtin(.agenda): agenda
+    case .builtin(.markets): MarketsSummary(markets: model.markets)
+    case .builtin(.usage): UsageSummary(usage: model.usage)
+    case .plugin(let id):
+      if let plugin = plugins.plugins.first(where: { $0.id == id }) { PluginHomeCard(plugin: plugin) }
+    }
+  }
+
+  private func open(_ slot: HomeSlot) {
+    let tab: NotchModel.Tab? = switch slot {
+    case .builtin(.media): .media
+    case .builtin(.markets): .markets
+    case .builtin(.usage): .usage
+    case .builtin(.agenda): nil
+    case .plugin(let id): plugins.plugins.first { $0.id == id }?.shows(.tab) == true ? .plugins : nil
     }
     if let tab { withAnimation(.snappy) { model.tab = tab } }
   }

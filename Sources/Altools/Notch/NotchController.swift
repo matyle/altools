@@ -1,10 +1,11 @@
+import AltoolsCore
 import AppKit
 import Combine
 import SwiftUI
 
 final class NotchModel: ObservableObject {
   enum Tab: String, CaseIterable, Identifiable {
-    case home, media, todo, notes, shelf, usage, markets
+    case home, media, todo, notes, shelf, usage, markets, plugins
     var id: String { rawValue }
     var title: String {
       switch self {
@@ -15,6 +16,7 @@ final class NotchModel: ObservableObject {
       case .shelf: "Shelf"
       case .usage: "AI usage"
       case .markets: "Markets"
+      case .plugins: "Plugins"
       }
     }
     var symbol: String {
@@ -26,6 +28,7 @@ final class NotchModel: ObservableObject {
       case .shelf: "tray.full.fill"
       case .usage: "gauge.with.dots.needle.67percent"
       case .markets: "chart.line.uptrend.xyaxis"
+      case .plugins: "puzzlepiece.extension.fill"
       }
     }
   }
@@ -52,6 +55,8 @@ final class NotchModel: ObservableObject {
     case ai
     case music
     case ticker(CryptoTicker.Quote)
+    /// A plugin's ears output; below music, above the ticker.
+    case plugin(id: String, ears: PluginOutput.Ears)
 
     /// Width of each ear beside the notch.
     var earWidth: CGFloat {
@@ -70,6 +75,7 @@ final class NotchModel: ObservableObject {
       case .ai: 36
       case .music: 36
       case .ticker: 60
+      case .plugin: 64
       }
     }
   }
@@ -80,6 +86,7 @@ final class NotchModel: ObservableObject {
     case meeting(RemindersStore.Meeting, startingNow: Bool)
     case notification(NotificationWatcher.Banner)
     case agent(AgentInbox.Item)
+    case plugin(id: String, alert: PluginOutput.Alert)
   }
 
   @Published var card: Card?
@@ -116,6 +123,7 @@ final class NotchModel: ObservableObject {
   let ticker = CryptoTicker()
   let agents = AgentInbox.shared
   let markets = MarketStore()
+  let plugins = PluginHost.shared
   let center = ActivityCenter.shared
 
   private var flashWork: DispatchWorkItem?
@@ -128,6 +136,10 @@ final class NotchModel: ObservableObject {
     if on("notch.sensors"), signals.sensors.active { return .sensors(signals.sensors) }
     if center.aiRunning > 0 { return .ai }
     if on("notch.nowplaying"), nowPlaying.track?.isPlaying == true { return .music }
+    if on("notch.plugins"), let plugin = plugins.plugins.first(where: { $0.shows(.ears) && $0.output?.ears != nil }),
+       let ears = plugin.output?.ears {
+      return .plugin(id: plugin.id, ears: ears)
+    }
     if on("notch.ticker"), let quote = ticker.freshQuote { return .ticker(quote) }
     return nil
   }
@@ -138,6 +150,7 @@ final class NotchModel: ObservableObject {
       switch tab {
       case .home: true
       case .media: AppSettings.shared.isOn("notch.nowplaying")
+      case .plugins: AppSettings.shared.isOn("notch.plugins") && plugins.plugins.contains { $0.shows(.tab) }
       default: AppSettings.shared.isOn("notch.\(tab.rawValue)")
       }
     }
@@ -260,6 +273,12 @@ final class NotchController {
     model.$expanded.removeDuplicates().filter { $0 }
       .sink { [weak self] _ in if on("notch.markets") { self?.model.markets.refresh() } }
       .store(in: &cancellables)
+    model.plugins.onAlert = { [weak self] alert, plugin in self?.showCard(.plugin(id: plugin.id, alert: alert), for: 8) }
+    if on("notch.plugins") { model.plugins.start() }
+    AppSettings.shared.$disabledCapabilities.map { !$0.contains("notch.plugins") }.removeDuplicates().dropFirst()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] on in on ? self?.model.plugins.start() : self?.model.plugins.stop() }
+      .store(in: &cancellables)
     model.agents.onNew = { [weak self] item in self?.showCard(.agent(item), for: 12) }
     if on("notch.agents") { model.agents.start() }
     AppSettings.shared.$disabledCapabilities.map { !$0.contains("notch.agents") }.removeDuplicates().dropFirst()
@@ -324,6 +343,7 @@ final class NotchController {
       model.signals.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.center.objectWillChange.map { _ in }.eraseToAnyPublisher(),
       model.ticker.objectWillChange.map { _ in }.eraseToAnyPublisher(),
+      model.plugins.objectWillChange.map { _ in }.eraseToAnyPublisher(),
     ]
     Publishers.MergeMany(sources)
       .receive(on: DispatchQueue.main)
@@ -345,6 +365,7 @@ final class NotchController {
     model.ticker.stop()
     model.agents.stop()
     model.markets.stop()
+    model.plugins.stop()
     model.signals.stop()
     volume.stop()
     spacer.stop()

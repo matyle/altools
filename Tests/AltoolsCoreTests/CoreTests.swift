@@ -78,6 +78,17 @@ import Testing
     #expect(Array(args.suffix(2)) == ["--", "-hi"])
   }
 
+  @Test func claudeAgentAddsAllowedToolsExceptWhenFull() {
+    let edits = AICommand.arguments(for: AIRequest(provider: .claude, mode: .agent, prompt: "x", toolPolicy: .acceptEdits,
+                                                   allowedTools: ["Bash(python3:*)", "WebFetch"]))
+    #expect(edits.contains("Bash(python3:*)"))
+    #expect(edits.firstIndex(of: "--allowedTools")! < edits.firstIndex(of: "--")!)
+    let full = AICommand.arguments(for: AIRequest(provider: .claude, mode: .agent, prompt: "x", toolPolicy: .full, allowedTools: ["WebFetch"]))
+    #expect(!full.contains("--allowedTools"))
+    let quick = AICommand.arguments(for: AIRequest(provider: .claude, mode: .quick, prompt: "x", allowedTools: ["WebFetch"]))
+    #expect(!quick.contains("WebFetch"))
+  }
+
   @Test func claudeAgentResumes() {
     let args = AICommand.arguments(for: AIRequest(provider: .claude, mode: .agent, prompt: "x", toolPolicy: .acceptEdits, resumeSessionID: "s1"))
     #expect(args.contains("acceptEdits"))
