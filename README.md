@@ -1,6 +1,6 @@
 # Altools
 
-**English** · [简体中文](README.zh-CN.md)
+**English** · [简体中文](README.zh-CN.md) · [Homepage — try it in the browser](https://matyle.github.io/altools/)
 
 A native macOS menu-bar toolkit: a launcher with clipboard history and AI, actions on selected text, screenshots with annotation and OCR, a notch island with live activity, menu-bar widgets, and a menu-bar icon hider. Written in Swift and SwiftUI, no Electron, no account.
 

@@ -1,6 +1,6 @@
 # Altools
 
-[English](README.md) · **简体中文**
+[English](README.md) · **简体中文** · [主页：在浏览器里试用](https://matyle.github.io/altools/)
 
 一个原生的 macOS 菜单栏工具箱：带剪贴板历史和 AI 的启动器、划词操作、带标注和文字识别的截图、显示实时动态的刘海岛、菜单栏小组件，以及菜单栏图标隐藏。用 Swift 和 SwiftUI 编写，不是 Electron，也不需要注册账号。
 
