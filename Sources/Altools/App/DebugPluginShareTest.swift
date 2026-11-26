@@ -43,7 +43,7 @@ enum DebugPluginShareTest {
     let store = PluginStore()
     store.load()
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + 14) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
       let markets = host.plugins.first { $0.id == "markets" }
       print("BUILTIN markets builtin=\(markets?.builtin ?? false) enabled=\(markets?.enabled ?? false) error=\(markets?.error ?? "-") ears=\(markets?.output?.ears?.text ?? "-") rows=\(markets?.output?.tab?.sections.flatMap(\.rows).map(\.title) ?? [])")
       let tick = PluginHost.folder.appendingPathComponent("ticktick")

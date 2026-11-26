@@ -76,7 +76,8 @@ enum PluginPackage {
   }
 
   /// Downloads a package (or any zip holding a plugin) through the proxy, then installs it.
-  static func install(remote url: URL, source: String? = nil, subpath: String? = nil) {
+  /// `fallbacks` are tried in order when the server refuses `url`.
+  static func install(remote url: URL, source: String? = nil, subpath: String? = nil, fallbacks: [URL] = []) {
     Toast.show("Downloading plugin…", symbol: "arrow.down.circle", duration: 2)
     ProxySession.shared.downloadTask(with: url) { file, response, error in
       // The temporary file is deleted when this handler returns, so keep a copy.
@@ -86,6 +87,9 @@ enum PluginPackage {
         if (try? FileManager.default.moveItem(at: file, to: copy)) != nil { kept = copy }
       }
       DispatchQueue.main.async {
+        if kept == nil, let next = fallbacks.first {
+          return install(remote: next, source: source, subpath: subpath, fallbacks: Array(fallbacks.dropFirst()))
+        }
         guard let kept else {
           alert("Couldn't download the plugin", error?.localizedDescription ?? "The server answered \((response as? HTTPURLResponse)?.statusCode ?? 0).")
           return
@@ -104,9 +108,67 @@ enum PluginPackage {
       alert("That isn't a GitHub repository", "Use owner/name, e.g. matyle/altools.")
       return
     }
-    // codeload serves "HEAD" as the default branch.
-    let url = URL(string: "https://codeload.github.com/\(repo)/zip/\(ref ?? "HEAD")")!
-    install(remote: url, source: "github.com/\(repo)" + (path.map { "/\($0)" } ?? ""), subpath: path)
+    let source = "github.com/\(repo)" + (path.map { "/\($0)" } ?? "")
+    Toast.show("Downloading plugin…", symbol: "arrow.down.circle", duration: 2)
+    Task { @MainActor in
+      // Just the plugin's files: small, and not caught by filters that block repository archives.
+      if let folder = await downloadFiles(repo: repo, path: path, ref: ref ?? "HEAD") {
+        install(from: folder, source: source)
+        try? FileManager.default.removeItem(at: folder.deletingLastPathComponent())
+        return
+      }
+      // The API can be rate-limited (60 calls an hour without a token); fall back to the archive.
+      // codeload serves "HEAD" as the default branch; a ref with a slash (feature/x) is only found in
+      // its full form, and it may be a branch or a tag.
+      let base = "https://codeload.github.com/\(repo)/zip/"
+      let refs = ref.map { [$0, "refs/heads/\($0)", "refs/tags/\($0)"] } ?? ["HEAD"]
+      let urls = refs.compactMap { URL(string: base + $0) }
+      install(remote: urls[0], source: source, subpath: path, fallbacks: Array(urls.dropFirst()))
+    }
+  }
+
+  /// Downloads the files under `path` (the whole repository when nil) into a temporary folder,
+  /// keeping executable bits; nil when the listing or any file can't be fetched, or it's too big
+  /// to be a plugin (over 200 files or 20 MB).
+  private static func downloadFiles(repo: String, path: String?, ref: String) async -> URL? {
+    struct Tree: Decodable {
+      struct Entry: Decodable { let path: String; let type: String; let mode: String; let size: Int? }
+      let tree: [Entry]
+      let truncated: Bool
+    }
+    let encodedRef = ref.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? ref
+    guard let listURL = URL(string: "https://api.github.com/repos/\(repo)/git/trees/\(encodedRef)?recursive=1") else { return nil }
+    var request = URLRequest(url: listURL, timeoutInterval: 15)
+    request.setValue("Altools", forHTTPHeaderField: "User-Agent")
+    request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+    guard let (data, response) = try? await ProxySession.shared.data(for: request),
+          (response as? HTTPURLResponse)?.statusCode == 200,
+          let tree = try? JSONDecoder().decode(Tree.self, from: data), !tree.truncated else { return nil }
+    let prefix = path.map { $0.hasSuffix("/") ? $0 : $0 + "/" } ?? ""
+    let files = tree.tree.filter { $0.type == "blob" && $0.path.hasPrefix(prefix) && !$0.path.contains("/.") && !$0.path.hasPrefix(".") }
+    guard !files.isEmpty, files.count <= 200, files.reduce(0, { $0 + ($1.size ?? 0) }) <= 20_000_000 else { return nil }
+    let staging = FileManager.default.temporaryDirectory.appendingPathComponent("altools-github-\(UUID().uuidString)")
+    let folder = staging.appendingPathComponent(path.map { ($0 as NSString).lastPathComponent } ?? repo.split(separator: "/").last.map(String.init) ?? "plugin")
+    let session = ProxySession.shared
+    let ok = await withTaskGroup(of: Bool.self) { group in
+      for file in files {
+        group.addTask {
+          let relative = String(file.path.dropFirst(prefix.count))
+          guard let raw = URL(string: "https://raw.githubusercontent.com/\(repo)/\(encodedRef)/\(file.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? file.path)"),
+                let (bytes, response) = try? await session.data(from: raw), (response as? HTTPURLResponse)?.statusCode == 200 else { return false }
+          let target = folder.appendingPathComponent(relative)
+          try? FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+          guard (try? bytes.write(to: target)) != nil else { return false }
+          if file.mode == "100755" { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: target.path) }
+          return true
+        }
+      }
+      var all = true
+      for await result in group { all = all && result }
+      return all
+    }
+    if !ok { try? FileManager.default.removeItem(at: staging) }
+    return ok ? folder : nil
   }
 
   /// Handles `altools://install-plugin?repo=owner/name[&path=sub/dir][&ref=v1.0]` or `?url=<https zip>`.
@@ -180,6 +242,9 @@ enum PluginPackage {
   }
 
   private static func alert(_ title: String, _ detail: String) {
+    #if DEBUG
+    if autoConfirm { return print("PLUGIN ALERT \(title): \(detail)") }
+    #endif
     let alert = NSAlert()
     alert.messageText = title
     alert.informativeText = detail
