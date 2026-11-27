@@ -44,6 +44,8 @@ final class SelectionController {
   private let result = SelectionResultModel()
   private var monitors: [Any] = []
   private var mouseDownPoint: NSPoint = .zero
+  /// Counts clicks, scrolls and key presses, so a delayed selection read can tell the user has moved on.
+  private var inputCount = 0
   private var currentText = ""
 
   init() {
@@ -59,6 +61,7 @@ final class SelectionController {
     stop()
     let down = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .scrollWheel, .keyDown]) { [weak self] event in
       if event.type == .leftMouseDown { self?.mouseDownPoint = NSEvent.mouseLocation }
+      self?.inputCount += 1
       self?.hideBar()
     }
     let up = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
@@ -92,14 +95,27 @@ final class SelectionController {
 
   private func handleMouseUp(_ event: NSEvent) {
     guard AppSettings.shared.selectionEnabled, AppSettings.shared.selectionAutoPopup, Permissions.accessibilityGranted else { return }
-    guard NSWorkspace.shared.frontmostApplication?.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+    let app = NSWorkspace.shared.frontmostApplication
+    guard app?.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
     let mouse = NSEvent.mouseLocation
     let dragged = hypot(mouse.x - mouseDownPoint.x, mouse.y - mouseDownPoint.y) > 6
     guard dragged || event.clickCount >= 2 else { return }
-    // Give the app a moment to update its selection.
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-      guard let text = SelectionReader.readViaAccessibility(), text.count < 20_000 else { return }
-      self?.showBar(for: text)
+    // Give the app a moment to update its selection. Chromium apps get two more tries: the first
+    // time, their accessibility has only just been switched on and the page tree is still building.
+    let waits = SelectionReader.wakeChromiumAccessibility(app) ? [0.12, 0.4, 0.7] : [0.12]
+    readSelection(waits: waits[...], inputCount: inputCount)
+  }
+
+  /// Reads the selection after each wait in turn until some turns up, giving up once the user
+  /// clicks, scrolls or types.
+  private func readSelection(waits: ArraySlice<Double>, inputCount count: Int) {
+    guard let wait = waits.first else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+      guard let self, self.inputCount == count else { return }
+      guard let text = SelectionReader.readViaAccessibility() else {
+        return self.readSelection(waits: waits.dropFirst(), inputCount: count)
+      }
+      if text.count < 20_000 { self.showBar(for: text) }
     }
   }
 
