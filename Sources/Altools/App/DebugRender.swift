@@ -98,18 +98,21 @@ enum DebugRender {
       ("22-settings-menubar", CGSize(width: 1100, height: 720), { AnyView(SettingsRoot(actions: SettingsActions(), page: .module("menubar"))) }),
       ("23-settings-permissions", CGSize(width: 1100, height: 720), { AnyView(SettingsRoot(actions: SettingsActions(), page: .permissions)) }),
       ("24-settings-ai", CGSize(width: 1100, height: 720), { AnyView(SettingsRoot(actions: SettingsActions(), page: .ai)) }),
-      ("12-annotate", CGSize(width: 900, height: 560), {
-        let image = demoScreenshot(size: NSSize(width: 860, height: 470))
-        let model = AnnotationModel(image: image)
-        model.marks = [
-          Mark(tool: .rectangle, color: .red, lineWidth: 3, points: [CGPoint(x: 0.06, y: 0.12), CGPoint(x: 0.5, y: 0.42)]),
-          Mark(tool: .arrow, color: .red, lineWidth: 3, points: [CGPoint(x: 0.75, y: 0.75), CGPoint(x: 0.53, y: 0.4)]),
-          Mark(tool: .highlight, color: .yellow, lineWidth: 3, points: [CGPoint(x: 0.06, y: 0.55), CGPoint(x: 0.45, y: 0.65)]),
-          Mark(tool: .text, color: .red, lineWidth: 3, points: [CGPoint(x: 0.62, y: 0.78)], text: "Fix this padding"),
-        ]
-        return AnyView(AnnotationView(model: model, onCopy: {}, onSave: {}, onPin: {}, onOCR: {}, onClose: {}))
-      }),
+      ("12-annotate", CGSize(width: 1080, height: 560), { annotate(NSSize(width: 860, height: 470)) }),
+      ("12b-annotate-narrow", CGSize(width: 760, height: 520), { annotate(NSSize(width: 700, height: 430)) }),
     ]
+  }
+
+  private static func annotate(_ size: NSSize) -> AnyView {
+    let image = demoScreenshot(size: size)
+    let model = AnnotationModel(image: image)
+    model.marks = [
+      Mark(tool: .rectangle, color: .red, lineWidth: 3, points: [CGPoint(x: 0.06, y: 0.12), CGPoint(x: 0.5, y: 0.42)]),
+      Mark(tool: .arrow, color: .red, lineWidth: 3, points: [CGPoint(x: 0.75, y: 0.75), CGPoint(x: 0.53, y: 0.4)]),
+      Mark(tool: .highlight, color: .yellow, lineWidth: 3, points: [CGPoint(x: 0.06, y: 0.55), CGPoint(x: 0.45, y: 0.65)]),
+      Mark(tool: .text, color: .red, lineWidth: 3, points: [CGPoint(x: 0.62, y: 0.78)], text: "Fix this padding"),
+    ]
+    return AnyView(AnnotationView(model: model, onCopy: {}, onSave: {}, onPin: {}, onOCR: {}, onClose: {}))
   }
 
   static func render(_ makeView: () -> AnyView, size: CGSize, to url: URL) {

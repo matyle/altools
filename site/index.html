@@ -23,7 +23,7 @@
       <li>Notch tabs: Home, Media, To-do (Reminders), Notes, file Shelf, AI usage, plus a tab for each plugin.</li>
       <li>Agent alerts: when a Claude Code agent in tuios needs approval, asks a question, errors or finishes, a card drops from the notch; click to jump to the pane.</li>
       <li>Plugins: a folder with plugin.json and a script in any language adds a notch widget, Home card, its own tab, alert cards, a menu-bar item, launcher commands and search, hotkeys or selected-text actions. Install from GitHub, import and export .altoolsplugin files, or have Claude Code write one.</li>
-      <li>Built-in Markets plugin: crypto, US and Hong Kong stocks, added by name or code. TickTick / 滴答清单 plugin: read today's tasks and add new ones from the launcher (tt …) or selected text.</li>
+      <li>Built-in Markets plugin: crypto, US and Hong Kong stocks, added by name or code.</li>
       <li>AI usage: Claude Code's 5-hour and weekly plan quotas and tokens used today.</li>
       <li>Launcher (⌥ Space): apps, commands, maths and clipboard history; Tab asks AI.</li>
       <li>Actions on selected text: translate, explain, rewrite or a custom prompt, then replace the selection.</li>
@@ -79,7 +79,6 @@
           <button data-tab="media"><span data-icon="music"></span><em data-i18n="tabMedia">Media</em></button>
           <button data-tab="usage"><span data-icon="gauge"></span><em data-i18n="tabUsage">AI usage</em></button>
           <button data-tab="markets" id="tab-markets"><span data-icon="chart"></span><em data-i18n="tabMarkets">Markets</em></button>
-          <button data-tab="ticktick" id="tab-ticktick"><span data-icon="checksq"></span><em>TickTick</em></button>
         </nav>
         <section class="pane" data-pane="home">
           <div class="home-row">
@@ -124,9 +123,6 @@
         </section>
         <section class="pane" data-pane="markets" hidden>
           <div class="markets-grid" id="markets-grid"></div>
-        </section>
-        <section class="pane" data-pane="ticktick" hidden>
-          <div class="tt" id="tt-list"></div>
         </section>
       </div>
       <button class="agent-card" id="agent-card" hidden></button>
@@ -201,7 +197,6 @@
       <button data-sel="translate"><span data-icon="translate"></span><em data-i18n="selTranslate">Translate</em></button>
       <button data-sel="explain"><span data-icon="spark"></span><em data-i18n="selExplain">Explain</em></button>
       <button data-sel="rewrite"><span data-icon="pen"></span><em data-i18n="selRewrite">Rewrite</em></button>
-      <button data-sel="ticktick" class="sel-plugin"><span data-icon="checksq"></span><em data-i18n="selTickTick">Add to TickTick</em></button>
     </div>
     <div id="selresult" hidden><div class="sr-head"><b id="sr-title"></b><button id="sr-close">✕</button></div><p id="sr-src"></p><p id="sr-out"></p><div class="sr-actions"><button id="sr-copy" data-i18n="selCopy">Copy</button><button id="sr-replace" class="primary" data-i18n="selReplace">Replace</button></div></div>
 
@@ -234,7 +229,6 @@
     <img src="assets/notch-home.png" alt="Notch island Home tab">
     <img src="assets/notch-agent-card.png" alt="Agent alert card">
     <img src="assets/launcher.png" alt="Launcher">
-    <img src="assets/notch-ticktick.png" alt="TickTick plugin tab">
     <img src="assets/notch-markets.png" alt="Markets plugin tab">
     <img src="assets/settings-overview.png" alt="Settings">
   </main>

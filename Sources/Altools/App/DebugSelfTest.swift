@@ -126,6 +126,10 @@ enum DebugSelfTest {
     let changed = output.tiffRepresentation != image.tiffRepresentation
     check("annotation export keeps size and burns in marks", sameSize && changed, "\(output.size)")
 
+    let small = AnnotationModel(image: DebugRender.demoScreenshot(size: NSSize(width: 400, height: 300)))
+    let width = AnnotationWindowController.contentWidth(AnnotationView(model: small, onCopy: {}, onSave: {}, onPin: {}, onOCR: {}, onClose: {}))
+    check("editor for a small capture fits the labelled toolbar, not the whole screen", (900...1300).contains(width), "\(Int(width)) pt")
+
     let saved = Pasteboard.snapshot()
     Pasteboard.copy(output)
     check("annotated image copies to pasteboard", NSImage(pasteboard: .general) != nil)
