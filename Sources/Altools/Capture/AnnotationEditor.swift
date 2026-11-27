@@ -150,7 +150,19 @@ struct AnnotationView: View {
     .ignoresSafeArea(edges: .top)
   }
 
+  /// Labelled buttons when the window is wide enough, icons only otherwise, so nothing is clipped.
   private var toolbar: some View {
+    ViewThatFits(in: .horizontal) {
+      toolbarRow(labelled: true)
+      toolbarRow(labelled: false)
+    }
+    .frame(height: AnnotationView.toolbarHeight)
+    .background(alignment: .center) {
+      Button("Close", action: onClose).keyboardShortcut(.cancelAction).hidden()
+    }
+  }
+
+  private func toolbarRow(labelled: Bool) -> some View {
     HStack(spacing: 10) {
       ForEach(Mark.Tool.allCases) { tool in
         Button { model.tool = tool } label: {
@@ -183,14 +195,10 @@ struct AnnotationView: View {
         .keyboardShortcut(model.textAnchor == nil ? KeyboardShortcut(.return, modifiers: []) : nil)
         .buttonStyle(AccentButtonStyle())
     }
-    .labelStyle(.titleAndIcon)
+    .labelStyle(LabelVisibility(labelled: labelled))
     // Leaves room for the window's close/minimize buttons, which share this row.
     .padding(.leading, 84)
     .padding(.trailing, 12)
-    .frame(height: AnnotationView.toolbarHeight)
-    .background(alignment: .center) {
-      Button("Close", action: onClose).keyboardShortcut(.cancelAction).hidden()
-    }
   }
 
   private func canvas(size: CGSize) -> some View {
@@ -302,7 +310,7 @@ final class AnnotationWindowController: NSObject, NSWindowDelegate {
     window.level = .floating
     // The content view spans the title bar, so its size is the whole window: toolbar row, divider, padded image.
     let image = AnnotationModel.editorSize(for: model.image)
-    window.setContentSize(NSSize(width: max(image.width + 32, 720), height: AnnotationView.toolbarHeight + 1 + image.height + 32))
+    window.setContentSize(NSSize(width: Self.contentWidth(view), height: AnnotationView.toolbarHeight + 1 + image.height + 32))
     window.isReleasedWhenClosed = false
     window.delegate = self
     window.center()
@@ -311,11 +319,31 @@ final class AnnotationWindowController: NSObject, NSWindowDelegate {
     window.makeKeyAndOrderFront(nil)
   }
 
+  /// At least as wide as the labelled toolbar and the padded image, capped to the screen
+  /// (where the toolbar drops its labels instead).
+  static func contentWidth(_ view: AnnotationView) -> CGFloat {
+    let ideal = NSHostingView(rootView: view.fixedSize()).fittingSize
+    let image = AnnotationModel.editorSize(for: view.model.image)
+    return min(max(ideal.width, image.width + 32, 720), ScreenGeometry.activeScreen.visibleFrame.width - 40)
+  }
+
   func close() {
     window?.close()
   }
 
   func windowWillClose(_ notification: Notification) {
     onClose?()
+  }
+}
+
+private struct LabelVisibility: LabelStyle {
+  let labelled: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    if labelled {
+      TitleAndIconLabelStyle().makeBody(configuration: configuration)
+    } else {
+      IconOnlyLabelStyle().makeBody(configuration: configuration)
+    }
   }
 }
