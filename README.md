@@ -35,7 +35,7 @@ Add your own features with a folder holding `plugin.json` and a script in any la
 - **Your own layout:** plugins describe their UI as a tree of stacks, grids, cards, text, symbols, badges, progress bars and sparklines, drawn natively like a widget. Or no UI at all: a plugin can stay running and pop a card only when something happens.
 - **Share:** export a plugin as an `.altoolsplugin` file, import one, or install from a GitHub folder. Settings › Plugins › **Plugin store** lists featured plugins and any repository tagged `altools-plugin`.
 - **Write one with AI:** describe what you want in Settings › Plugins and Claude Code writes it, reading the same guide.
-- **Built in:** Markets, with crypto, US and Hong Kong stocks added by name or code, sparklines, a launcher search (`mk 腾讯`) and an optional menu-bar ticker.
+- **Built in:** Markets, with crypto, US and Hong Kong stocks added by name or code, sparklines, a launcher search (`mk 腾讯`) and an optional menu-bar ticker. Battery, with the levels of AirPods, keyboards, mice and other accessories and an alert each time one runs low.
 - **Examples:** [text tools](examples/plugins/text-tools), [site monitor](examples/plugins/site-monitor) and [more](examples/plugins).
 
 ![Markets plugin](docs/screenshots/notch-markets.png)

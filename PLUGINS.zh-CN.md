@@ -228,7 +228,8 @@ EOF
 
 更多例子在 [`examples/plugins`](examples/plugins)：`hello`（行和视图）、
 `site-monitor`（没有界面的常驻插件），以及 `text-tools`（划词、带快捷键的命令、启动器搜索）。内置的行情插件（[`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)）
-是视图的完整例子。
+是视图的完整例子。内置的电量插件（[`Resources/BuiltinPlugins/battery`](Resources/BuiltinPlugins/battery)）是编译好的程序
+（[`Sources/altools-battery`](Sources/altools-battery)），状态存在 `$ALTOOLS_DATA_DIR` 里，所以每次电量低只提醒一次。
 
 ## 让 AI agent 来写
 

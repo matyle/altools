@@ -22,6 +22,9 @@ cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 cp "$root/PLUGINS.md" "$app/Contents/Resources/PLUGINS.md"
 cp -R "$root/examples/plugins" "$app/Contents/Resources/PluginExamples"
 cp -R "$root/Resources/BuiltinPlugins" "$app/Contents/Resources/BuiltinPlugins"
+# The Battery plugin's program is compiled with the app (Sources/altools-battery).
+battery="$app/Contents/Resources/BuiltinPlugins/battery/battery"
+cp "$(dirname "$bin")/altools-battery" "$battery"
 cp "$root/plugins/registry.json" "$app/Contents/Resources/registry.json"
 
 # System Now Playing bridge, loaded into /usr/bin/perl at runtime (see NowPlaying.swift).
@@ -38,6 +41,7 @@ if security find-identity -p codesigning 2>/dev/null | grep -q '"Altools Dev"'; 
 fi
 identity="${ALTOOLS_SIGN_IDENTITY:-$default_identity}"
 codesign --force --sign "$identity" "$app/Contents/Frameworks/libAltoolsMedia.dylib"
+codesign --force --sign "$identity" --identifier local.altools.battery "$battery"
 codesign --force --sign "$identity" --identifier local.altools.menubar "$app"
 
 echo "Built $app (signed with: $identity)"

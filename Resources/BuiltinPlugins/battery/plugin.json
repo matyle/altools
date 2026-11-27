@@ -1,0 +1,58 @@
+{
+  "id": "battery",
+  "name": "Battery",
+  "version": "1.0.0",
+  "author": "Altools",
+  "description": "Battery levels of AirPods, keyboards, mice and other accessories, with an alert when one runs low. Reads what macOS already knows; nothing leaves the Mac.",
+  "api": 1,
+  "icon": "battery.75percent",
+  "tint": "#56B6C2",
+  "run": "battery",
+  "interval": 120,
+  "timeout": 10,
+  "slots": [
+    "ears",
+    "home",
+    "tab",
+    "alerts",
+    "menubar"
+  ],
+  "settings": [
+    {
+      "key": "threshold",
+      "title": "Alert at",
+      "type": "choice",
+      "options": [
+        "5%",
+        "10%",
+        "15%",
+        "20%",
+        "25%",
+        "30%"
+      ],
+      "default": "20%",
+      "note": "One alert when a device drops to this level, and a last one at 5% if this is higher."
+    },
+    {
+      "key": "ears",
+      "title": "Beside the notch",
+      "type": "choice",
+      "options": [
+        "When low",
+        "Always",
+        "Off"
+      ],
+      "default": "When low"
+    },
+    {
+      "key": "menubar",
+      "title": "In the menu bar",
+      "type": "choice",
+      "options": [
+        "Off",
+        "Lowest device"
+      ],
+      "default": "Off"
+    }
+  ]
+}

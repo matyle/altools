@@ -241,7 +241,9 @@ EOF
 
 More examples are in [`examples/plugins`](examples/plugins): `hello` (rows and a view), `site-monitor` (a stream plugin with no UI) and `text-tools` (selected text, a
 command with a hotkey, launcher search). The built-in Markets plugin
-([`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)) is a full example of views.
+([`Resources/BuiltinPlugins/markets`](Resources/BuiltinPlugins/markets)) is a full example of views. The built-in
+Battery plugin ([`Resources/BuiltinPlugins/battery`](Resources/BuiltinPlugins/battery)) is a compiled program
+([`Sources/altools-battery`](Sources/altools-battery)) that keeps state in `$ALTOOLS_DATA_DIR`, so each low battery alerts once.
 
 ## Writing one with an AI agent
 
